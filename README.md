@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 美好时光日志
 
-## Getting Started
+一款手机优先的本地日志应用，用于记录活动中的投入程度、能量变化与心流体验，并在回顾中发现反复出现的线索。
 
-First, run the development server:
+## 功能
+
+- 按日期记录活动、补充具体细节
+- 拖动“投入”和“能量”仪表盘
+- 标记心流体验
+- 使用 IndexedDB 自动保存在当前设备
+- 近 7 天、近 30 天和全部记录回顾
+- 自动识别高投入、充能和耗能活动
+- 生成并分享当天日志图片
+- JSON 数据备份、恢复与设备迁移
+- PWA 安装与基础离线访问
+
+## 数据与隐私
+
+日志默认只保存在当前浏览器，不会上传到服务器。清理浏览器数据、卸载浏览器或更换设备前，请先在“设置”中导出 JSON 备份。
+
+## 本地开发
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+生产检查：
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run lint
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 部署
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+仓库连接 Vercel 后，推送到 `main` 分支会自动触发部署。

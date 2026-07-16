@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="116" fill="#61745a"/>
+  <circle cx="256" cy="256" r="150" fill="#fffdf8" opacity=".12"/>
+  <path d="M256 344c-37-49-71-79-105-92 31-10 62-3 92 23-12-61 0-109 36-144 4 45-2 84-18 117 35-31 70-43 105-36-24 27-59 51-105 72 17 18 29 38 36 60h-41Z" fill="#f3e8c8"/>
+  <circle cx="169" cy="194" r="30" fill="#d2a84a"/>
+  <circle cx="348" cy="177" r="22" fill="#c86f50"/>
+  <text x="256" y="397" text-anchor="middle" font-size="90" font-family="serif" font-weight="700" fill="#fffdf8">好</text>
+</svg>
