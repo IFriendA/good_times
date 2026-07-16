@@ -121,23 +121,34 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 
 .date-navigator {
   display: grid;
-  grid-template-columns: 42px 1fr 42px;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
   align-items: center;
-  gap: 4px;
+  gap: 0;
   margin: 0 0 16px;
 }
 
-.date-navigator > button {
-  width: 42px;
-  height: 42px;
+.date-navigator__arrow {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  align-self: center;
+  justify-self: center;
   border: 0;
   background: transparent;
   border-radius: 50%;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
   cursor: pointer;
 }
-.date-navigator > button:active { background: rgba(97, 116, 90, .1); }
+.date-navigator__arrow svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+}
+.date-navigator__arrow:active { background: rgba(97, 116, 90, .1); }
 
 .date-navigator__center {
   position: relative;

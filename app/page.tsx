@@ -366,6 +366,7 @@ export default function Home() {
         <section className="page-section page-section--journal">
           <div className="date-navigator">
             <button
+              className="date-navigator__arrow"
               type="button"
               onClick={() => setSelectedDate((date) => shiftDate(date, -1))}
               aria-label="前一天"
@@ -383,6 +384,7 @@ export default function Home() {
               />
             </label>
             <button
+              className="date-navigator__arrow"
               type="button"
               onClick={() => setSelectedDate((date) => shiftDate(date, 1))}
               aria-label="后一天"
