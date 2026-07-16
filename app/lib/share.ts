@@ -1,6 +1,8 @@
 import { formatDate } from "./date";
 import { ActivityEntry, BackupFile } from "./types";
 
+export type ShareStyle = "simple" | "gauges";
+
 const COLORS = {
   ink: "#29241f",
   muted: "#766e63",
@@ -96,16 +98,85 @@ function drawMeter(
   context.fill();
 }
 
-function makeDailyCanvas(date: string, entries: ActivityEntry[]): HTMLCanvasElement {
-  const canvas = document.createElement("canvas");
-  canvas.width = 1080;
-  canvas.height = 1440;
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("无法生成分享图片");
+function drawGauge(
+  context: CanvasRenderingContext2D,
+  centerX: number,
+  centerY: number,
+  radius: number,
+  value: number,
+  min: number,
+  max: number,
+  kind: "engagement" | "energy",
+) {
+  const progress = Math.max(0, Math.min(1, (value - min) / (max - min)));
+  const start = Math.PI;
+  const end = Math.PI * 2;
+  const needleAngle = start + progress * Math.PI;
 
-  context.fillStyle = COLORS.paper;
-  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.lineCap = "round";
+  context.lineWidth = 14;
+  context.strokeStyle = COLORS.line;
+  context.beginPath();
+  context.arc(centerX, centerY, radius, start, end);
+  context.stroke();
 
+  if (kind === "energy") {
+    context.globalAlpha = 0.34;
+    context.strokeStyle = COLORS.coral;
+    context.beginPath();
+    context.arc(centerX, centerY, radius, start, Math.PI * 1.5);
+    context.stroke();
+    context.strokeStyle = COLORS.gold;
+    context.beginPath();
+    context.arc(centerX, centerY, radius, Math.PI * 1.5, end);
+    context.stroke();
+    context.globalAlpha = 1;
+  } else {
+    context.globalAlpha = 0.4;
+    context.strokeStyle = COLORS.green;
+    context.beginPath();
+    context.arc(centerX, centerY, radius, start, end);
+    context.stroke();
+    context.globalAlpha = 1;
+  }
+
+  context.lineWidth = 5;
+  context.strokeStyle = COLORS.ink;
+  context.beginPath();
+  context.moveTo(centerX, centerY);
+  context.lineTo(
+    centerX + Math.cos(needleAngle) * radius * 0.76,
+    centerY + Math.sin(needleAngle) * radius * 0.76,
+  );
+  context.stroke();
+
+  context.fillStyle = COLORS.ink;
+  context.beginPath();
+  context.arc(centerX, centerY, 10, 0, Math.PI * 2);
+  context.fill();
+  context.fillStyle = COLORS.card;
+  context.beginPath();
+  context.arc(centerX, centerY, 4, 0, Math.PI * 2);
+  context.fill();
+
+  context.fillStyle = COLORS.muted;
+  context.font = '500 18px "PingFang SC", "Microsoft YaHei", sans-serif';
+  context.textAlign = "center";
+  context.fillText(kind === "energy" ? "负" : "低", centerX - radius - 4, centerY + 28);
+  context.fillText(kind === "energy" ? "正" : "高", centerX + radius + 4, centerY + 28);
+  if (kind === "energy") context.fillText("0", centerX, centerY - radius - 17);
+  context.fillStyle = COLORS.ink;
+  context.font = '600 22px "PingFang SC", "Microsoft YaHei", sans-serif';
+  const displayValue = kind === "energy" && value > 0 ? `+${value}` : String(value);
+  context.fillText(`${kind === "energy" ? "能量" : "投入"} ${displayValue}`, centerX, centerY + 39);
+  context.textAlign = "start";
+}
+
+function drawHeader(
+  context: CanvasRenderingContext2D,
+  date: string,
+  nickname: string,
+) {
   context.fillStyle = COLORS.green;
   context.beginPath();
   context.arc(930, 105, 170, 0, Math.PI * 2);
@@ -121,9 +192,35 @@ function makeDailyCanvas(date: string, entries: ActivityEntry[]): HTMLCanvasElem
   context.fillStyle = COLORS.muted;
   context.font = '400 30px "PingFang SC", "Microsoft YaHei", sans-serif';
   context.fillText(formatDate(date), 76, 166);
+  context.fillStyle = COLORS.green;
+  context.font = '600 25px "PingFang SC", "Microsoft YaHei", sans-serif';
+  context.fillText(`记录者 · ${Array.from(nickname).slice(0, 20).join("")}`, 76, 207);
+}
 
-  const visibleEntries = entries.slice(0, 6);
-  let y = 222;
+function drawFooter(
+  context: CanvasRenderingContext2D,
+  nickname: string,
+  hiddenCount: number,
+) {
+  if (hiddenCount > 0) {
+    context.fillStyle = COLORS.muted;
+    context.font = '500 22px "PingFang SC", "Microsoft YaHei", sans-serif';
+    context.fillText(`还有 ${hiddenCount} 条活动，请在日志中查看`, 72, 1415);
+  }
+  context.fillStyle = COLORS.muted;
+  context.font = '400 22px "PingFang SC", "Microsoft YaHei", sans-serif';
+  context.fillText("留意投入与能量，找到属于自己的方向", 72, 1465);
+  context.textAlign = "right";
+  context.fillText(`${nickname} · GOOD TIMES`, 1008, 1465);
+  context.textAlign = "start";
+}
+
+function drawSimpleEntries(
+  context: CanvasRenderingContext2D,
+  entries: ActivityEntry[],
+) {
+  const visibleEntries = entries.slice(0, 5);
+  let y = 250;
 
   visibleEntries.forEach((entry, index) => {
     const cardHeight = entry.detail ? 178 : 144;
@@ -136,8 +233,7 @@ function makeDailyCanvas(date: string, entries: ActivityEntry[]): HTMLCanvasElem
 
     context.fillStyle = COLORS.ink;
     context.font = '600 34px "PingFang SC", "Microsoft YaHei", sans-serif';
-    const titleLines = wrapText(context, entry.title, 580, 1);
-    context.fillText(titleLines[0] ?? "", 142, y + 52);
+    context.fillText(wrapText(context, entry.title, 580, 1)[0] ?? "", 142, y + 52);
 
     if (entry.flow) {
       context.fillStyle = COLORS.gold;
@@ -150,8 +246,7 @@ function makeDailyCanvas(date: string, entries: ActivityEntry[]): HTMLCanvasElem
     if (entry.detail) {
       context.fillStyle = COLORS.muted;
       context.font = '400 25px "PingFang SC", "Microsoft YaHei", sans-serif';
-      const detailLines = wrapText(context, entry.detail, 800, 1);
-      context.fillText(detailLines[0] ?? "", 142, y + 92);
+      context.fillText(wrapText(context, entry.detail, 800, 1)[0] ?? "", 142, y + 92);
     }
 
     const meterY = y + cardHeight - 38;
@@ -160,48 +255,129 @@ function makeDailyCanvas(date: string, entries: ActivityEntry[]): HTMLCanvasElem
     context.fillText("投入", 142, meterY + 6);
     drawMeter(context, 200, meterY - 5, 245, entry.engagement, 0, 10, COLORS.green);
     context.fillText("能量", 500, meterY + 6);
-    drawMeter(context, 558, meterY - 5, 245, entry.energy, -5, 5, entry.energy < 0 ? COLORS.coral : COLORS.gold);
+    drawMeter(
+      context,
+      558,
+      meterY - 5,
+      245,
+      entry.energy,
+      -5,
+      5,
+      entry.energy < 0 ? COLORS.coral : COLORS.gold,
+    );
     context.fillStyle = COLORS.ink;
     context.font = '600 20px "PingFang SC", "Microsoft YaHei", sans-serif';
     context.fillText(`${entry.engagement}/10`, 455, meterY + 6);
     context.fillText(entry.energy > 0 ? `+${entry.energy}` : String(entry.energy), 813, meterY + 6);
-
     y += cardHeight + 20;
   });
 
-  if (!entries.length) {
+  return entries.length - visibleEntries.length;
+}
+
+function drawGaugeEntries(
+  context: CanvasRenderingContext2D,
+  entries: ActivityEntry[],
+) {
+  const visibleEntries = entries.slice(0, 4);
+  let y = 250;
+
+  visibleEntries.forEach((entry, index) => {
+    const cardHeight = 260;
     context.fillStyle = COLORS.card;
-    roundedRect(context, 60, 250, 960, 330, 32);
+    roundedRect(context, 60, y, 960, cardHeight, 28);
+    context.fillStyle = COLORS.muted;
+    context.font = '600 24px "PingFang SC", "Microsoft YaHei", sans-serif';
+    context.fillText(String(index + 1).padStart(2, "0"), 90, y + 49);
+    context.fillStyle = COLORS.ink;
+    context.font = '600 34px "PingFang SC", "Microsoft YaHei", sans-serif';
+    context.fillText(wrapText(context, entry.title, 580, 1)[0] ?? "", 142, y + 52);
+
+    if (entry.flow) {
+      context.fillStyle = COLORS.gold;
+      roundedRect(context, 850, y + 25, 120, 44, 22);
+      context.fillStyle = "#fff";
+      context.font = '600 22px "PingFang SC", "Microsoft YaHei", sans-serif';
+      context.fillText("心流", 886, y + 55);
+    }
+
+    if (entry.detail) {
+      context.fillStyle = COLORS.muted;
+      context.font = '400 23px "PingFang SC", "Microsoft YaHei", sans-serif';
+      context.fillText(wrapText(context, entry.detail, 760, 1)[0] ?? "", 142, y + 88);
+    }
+
+    drawGauge(context, 340, y + 205, 74, entry.engagement, 0, 10, "engagement");
+    drawGauge(context, 740, y + 205, 74, entry.energy, -5, 5, "energy");
+    y += cardHeight + 20;
+  });
+
+  return entries.length - visibleEntries.length;
+}
+
+function makeDailyCanvas(
+  date: string,
+  entries: ActivityEntry[],
+  nickname: string,
+  style: ShareStyle,
+): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1080;
+  canvas.height = 1500;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("无法生成分享图片");
+
+  context.fillStyle = COLORS.paper;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  drawHeader(context, date, nickname);
+
+  let hiddenCount = 0;
+  if (entries.length) {
+    hiddenCount = style === "gauges"
+      ? drawGaugeEntries(context, entries)
+      : drawSimpleEntries(context, entries);
+  } else {
+    context.fillStyle = COLORS.card;
+    roundedRect(context, 60, 270, 960, 330, 32);
     context.fillStyle = COLORS.muted;
     context.font = '400 34px "PingFang SC", "Microsoft YaHei", sans-serif';
     context.textAlign = "center";
-    context.fillText("今天还没有记录", 540, 405);
+    context.fillText("今天还没有记录", 540, 430);
     context.textAlign = "start";
   }
 
-  context.fillStyle = COLORS.muted;
-  context.font = '400 22px "PingFang SC", "Microsoft YaHei", sans-serif';
-  context.fillText("留意投入与能量，找到属于自己的方向", 72, 1378);
-  context.textAlign = "right";
-  context.fillText("GOOD TIMES", 1008, 1378);
-  context.textAlign = "start";
-
+  drawFooter(context, nickname, hiddenCount);
   return canvas;
 }
 
-export async function shareDailyImage(date: string, entries: ActivityEntry[]) {
-  const canvas = makeDailyCanvas(date, entries);
-  const blob = await new Promise<Blob>((resolve, reject) => {
+export async function createDailyImage(
+  date: string,
+  entries: ActivityEntry[],
+  nickname: string,
+  style: ShareStyle,
+): Promise<Blob> {
+  const canvas = makeDailyCanvas(date, entries, nickname, style);
+  return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((result) => {
       if (result) resolve(result);
       else reject(new Error("无法生成分享图片"));
     }, "image/png");
   });
-  const file = new File([blob], `美好时光-${date}.png`, { type: "image/png" });
+}
+
+export async function shareDailyImage(
+  date: string,
+  entries: ActivityEntry[],
+  nickname: string,
+  style: ShareStyle,
+  preparedBlob?: Blob,
+) {
+  const blob = preparedBlob ?? await createDailyImage(date, entries, nickname, style);
+  const file = new File([blob], `美好时光-${nickname}-${date}.png`, { type: "image/png" });
 
   if (navigator.share && navigator.canShare?.({ files: [file] })) {
     await navigator.share({
-      title: "美好时光日志",
+      title: `${nickname}的美好时光日志`,
       text: formatDate(date),
       files: [file],
     });

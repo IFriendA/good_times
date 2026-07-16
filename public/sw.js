@@ -1,4 +1,4 @@
-const CACHE_NAME = "good-times-v1";
+const CACHE_NAME = "good-times-v2";
 const APP_SHELL = ["/"];
 
 self.addEventListener("install", (event) => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import Gauge from "./components/Gauge";
 import {
   ChartIcon,
@@ -18,7 +19,7 @@ import {
 } from "./components/Icons";
 import { formatDate, shiftDate, shortDate, todayKey } from "./lib/date";
 import { clearEntries, deleteEntry, getEntries, saveEntries, saveEntry } from "./lib/storage";
-import { exportBackup, shareDailyImage } from "./lib/share";
+import { createDailyImage, exportBackup, shareDailyImage, ShareStyle } from "./lib/share";
 import { ActivityEntry, isActivityEntry } from "./lib/types";
 
 type Tab = "journal" | "review" | "settings";
@@ -90,11 +91,22 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [reviewRange, setReviewRange] = useState<ReviewRange>("7");
   const [toast, setToast] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [nicknameDraft, setNicknameDraft] = useState("");
+  const [nicknameEditing, setNicknameEditing] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareStyle, setShareStyle] = useState<ShareStyle>("simple");
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previewBlobRef = useRef<Blob | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setSelectedDate(todayKey());
+    const savedNickname = window.localStorage.getItem("good-times-nickname") ?? "";
+    setNickname(savedNickname);
+    setNicknameDraft(savedNickname);
     getEntries()
       .then(setEntries)
       .catch(() => setToast("读取本地记录失败，请刷新后重试"))
@@ -120,6 +132,38 @@ export default function Home() {
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     [entries, selectedDate],
   );
+
+  useEffect(() => {
+    if (!shareOpen || !nickname || nicknameEditing || !selectedDate) {
+      setPreviewUrl("");
+      return;
+    }
+
+    let active = true;
+    let objectUrl = "";
+    previewBlobRef.current = null;
+    setPreviewLoading(true);
+    setPreviewUrl("");
+    createDailyImage(selectedDate, dayEntries, nickname, shareStyle)
+      .then((blob) => {
+        if (!active) return;
+        previewBlobRef.current = blob;
+        objectUrl = URL.createObjectURL(blob);
+        setPreviewUrl(objectUrl);
+      })
+      .catch(() => {
+        if (active) showToast("预览生成失败，请稍后重试");
+      })
+      .finally(() => {
+        if (active) setPreviewLoading(false);
+      });
+
+    return () => {
+      active = false;
+      previewBlobRef.current = null;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [shareOpen, nickname, nicknameEditing, selectedDate, dayEntries, shareStyle]);
 
   const reviewEntries = useMemo(() => {
     if (reviewRange === "all") return entries;
@@ -225,9 +269,31 @@ export default function Home() {
     }
   }
 
+  function openShare() {
+    setNicknameDraft(nickname);
+    setNicknameEditing(!nickname);
+    setShareOpen(true);
+  }
+
+  function saveNicknameForSharing(event: FormEvent) {
+    event.preventDefault();
+    const cleaned = nicknameDraft.trim();
+    if (!cleaned) return;
+    window.localStorage.setItem("good-times-nickname", cleaned);
+    setNickname(cleaned);
+    setNicknameDraft(cleaned);
+    setNicknameEditing(false);
+  }
+
   async function handleShare() {
     try {
-      const result = await shareDailyImage(selectedDate, dayEntries);
+      const result = await shareDailyImage(
+        selectedDate,
+        dayEntries,
+        nickname,
+        shareStyle,
+        previewBlobRef.current ?? undefined,
+      );
       showToast(result === "shared" ? "分享面板已打开" : "分享图片已保存");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
@@ -290,7 +356,7 @@ export default function Home() {
           <h1>美好时光日志</h1>
         </div>
         {activeTab === "journal" && (
-          <button className="header-action" type="button" onClick={handleShare} aria-label="分享当天记录">
+          <button className="header-action" type="button" onClick={openShare} aria-label="分享当天记录">
             <ShareIcon />
           </button>
         )}
@@ -549,18 +615,6 @@ export default function Home() {
                 </div>
               )}
 
-              <div className="paper-card aeio-card">
-                <p className="eyebrow">AEIOU 反思法</p>
-                <h3>把镜头拉近一点</h3>
-                <div className="aeio-grid">
-                  <span><b>A</b> 活动</span>
-                  <span><b>E</b> 环境</span>
-                  <span><b>I</b> 互动</span>
-                  <span><b>O</b> 物体</span>
-                  <span><b>U</b> 用户</span>
-                </div>
-                <p>选择一个意外的高峰或低谷，分别从这五个角度问自己：真正起作用的细节是什么？</p>
-              </div>
             </>
           )}
         </section>
@@ -597,17 +651,6 @@ export default function Home() {
             <input ref={fileInputRef} type="file" accept="application/json,.json" hidden onChange={handleImport} />
           </div>
 
-          <div className="settings-group">
-            <h3>安装到手机</h3>
-            <div className="paper-card install-card">
-              <div className="app-icon" aria-hidden="true"><span>好</span></div>
-              <div>
-                <strong>像 App 一样打开</strong>
-                <p>iPhone：Safari 分享 → 添加到主屏幕<br />Android：浏览器菜单 → 安装应用</p>
-              </div>
-            </div>
-          </div>
-
           <div className="settings-group danger-zone">
             <h3>危险操作</h3>
             <button type="button" onClick={handleClearAll} disabled={!entries.length}>清空全部本地记录</button>
@@ -619,6 +662,89 @@ export default function Home() {
             <small>本应用依据《斯坦福大学人生设计课》中的练习理念设计。</small>
           </footer>
         </section>
+      )}
+
+      {shareOpen && (
+        <div className="share-modal" role="dialog" aria-modal="true" aria-labelledby="share-title">
+          <button className="share-modal__backdrop" type="button" aria-label="关闭分享预览" onClick={() => setShareOpen(false)} />
+          <section className="share-sheet">
+            <div className="share-sheet__handle" />
+            <div className="share-sheet__header">
+              <div>
+                <p className="eyebrow">SHARE YOUR DAY</p>
+                <h2 id="share-title">分享今日时光</h2>
+              </div>
+              <button type="button" onClick={() => setShareOpen(false)} aria-label="关闭">×</button>
+            </div>
+
+            {nicknameEditing || !nickname ? (
+              <form className="nickname-form" onSubmit={saveNicknameForSharing}>
+                <div className="nickname-form__mark">你</div>
+                <h3>{nickname ? "修改分享昵称" : "第一次分享，怎么称呼你？"}</h3>
+                <p>昵称会显示在导出的图片中，并且只保存在这台设备上。</p>
+                <label htmlFor="share-nickname">我的昵称</label>
+                <input
+                  id="share-nickname"
+                  className="text-input text-input--large"
+                  value={nicknameDraft}
+                  onChange={(event) => setNicknameDraft(event.target.value)}
+                  placeholder="例如：小美"
+                  maxLength={20}
+                  autoFocus
+                  required
+                />
+                <button className="primary-button" type="submit">保存并生成预览</button>
+                {nickname && (
+                  <button className="text-button nickname-form__cancel" type="button" onClick={() => setNicknameEditing(false)}>取消修改</button>
+                )}
+              </form>
+            ) : (
+              <>
+                <div className="share-profile">
+                  <span>记录者 · <strong>{nickname}</strong></span>
+                  <button type="button" onClick={() => setNicknameEditing(true)}>修改昵称</button>
+                </div>
+
+                <div className="share-style-picker" aria-label="分享图片样式">
+                  <button
+                    type="button"
+                    className={shareStyle === "simple" ? "active" : ""}
+                    onClick={() => setShareStyle("simple")}
+                  >
+                    <span className="style-icon style-icon--simple"><i /><i /><i /></span>
+                    <span><strong>简洁清单</strong><small>重点信息一目了然</small></span>
+                  </button>
+                  <button
+                    type="button"
+                    className={shareStyle === "gauges" ? "active" : ""}
+                    onClick={() => setShareStyle("gauges")}
+                  >
+                    <span className="style-icon style-icon--gauge"><i /></span>
+                    <span><strong>仪表盘</strong><small>保留投入与能量指针</small></span>
+                  </button>
+                </div>
+
+                <div className="share-preview">
+                  {previewLoading && <div className="share-preview__loading">正在生成预览…</div>}
+                  {previewUrl && (
+                    <Image
+                      src={previewUrl}
+                      alt={`${nickname}的美好时光日志分享预览`}
+                      width={1080}
+                      height={1500}
+                      unoptimized
+                      priority
+                    />
+                  )}
+                </div>
+
+                <button className="primary-button share-final-button" type="button" onClick={handleShare} disabled={!previewUrl || previewLoading}>
+                  <ShareIcon size={19} /> 分享或保存图片
+                </button>
+              </>
+            )}
+          </section>
+        </div>
       )}
 
       <nav className="bottom-nav" aria-label="主导航">
