@@ -210,31 +210,61 @@ function drawFooter(
   context.textAlign = "start";
 }
 
-function beginHiddenContent(
+function drawHiddenExportCard(
   context: CanvasRenderingContext2D,
-  entry: ActivityEntry,
   y: number,
   cardHeight: number,
+  style: ShareStyle,
 ) {
-  if (!entry.hidden) return;
   context.save();
   context.beginPath();
   context.roundRect(60, y, 960, cardHeight, 28);
   context.clip();
-  context.filter = "blur(11px)";
-  context.globalAlpha = 0.5;
-}
 
-function endHiddenContent(
-  context: CanvasRenderingContext2D,
-  entry: ActivityEntry,
-  y: number,
-  cardHeight: number,
-) {
-  if (!entry.hidden) return;
-  context.restore();
-  context.fillStyle = "rgba(255, 253, 248, .28)";
+  const frost = context.createLinearGradient(60, y, 1020, y + cardHeight);
+  frost.addColorStop(0, "rgba(237, 231, 220, .97)");
+  frost.addColorStop(0.48, "rgba(225, 232, 220, .96)");
+  frost.addColorStop(1, "rgba(241, 225, 214, .97)");
+  context.fillStyle = frost;
   roundedRect(context, 60, y, 960, cardHeight, 28);
+
+  context.globalAlpha = 0.38;
+  context.shadowColor = "rgba(87, 78, 64, .28)";
+  context.shadowBlur = 28;
+  context.fillStyle = "rgba(118, 110, 97, .38)";
+  roundedRect(context, 116, y + 34, 150, 24, 12);
+  roundedRect(context, 292, y + 30, 430, 34, 17);
+  if (cardHeight > 150) {
+    roundedRect(context, 154, y + 82, 610, 22, 11);
+  }
+
+  if (style === "gauges") {
+    context.fillStyle = "rgba(97, 116, 90, .24)";
+    context.beginPath();
+    context.arc(340, y + 205, 70, Math.PI, Math.PI * 2);
+    context.lineWidth = 20;
+    context.strokeStyle = "rgba(97, 116, 90, .32)";
+    context.stroke();
+    context.beginPath();
+    context.arc(740, y + 205, 70, Math.PI, Math.PI * 2);
+    context.strokeStyle = "rgba(210, 168, 74, .32)";
+    context.stroke();
+  } else {
+    context.fillStyle = "rgba(97, 116, 90, .25)";
+    roundedRect(context, 160, y + cardHeight - 44, 285, 15, 8);
+    context.fillStyle = "rgba(210, 168, 74, .25)";
+    roundedRect(context, 558, y + cardHeight - 44, 285, 15, 8);
+  }
+
+  context.restore();
+
+  const veil = context.createLinearGradient(390, y, 690, y + cardHeight);
+  veil.addColorStop(0, "rgba(255, 253, 248, .16)");
+  veil.addColorStop(0.5, "rgba(255, 253, 248, .52)");
+  veil.addColorStop(1, "rgba(255, 253, 248, .16)");
+  context.fillStyle = veil;
+  roundedRect(context, 60, y, 960, cardHeight, 28);
+
   context.fillStyle = "rgba(97, 116, 90, .88)";
   roundedRect(context, 438, y + cardHeight / 2 - 24, 204, 48, 24);
   context.fillStyle = "#fff";
@@ -254,7 +284,11 @@ function drawSimpleEntries(
     const cardHeight = entry.detail ? 178 : 144;
     context.fillStyle = COLORS.card;
     roundedRect(context, 60, y, 960, cardHeight, 28);
-    beginHiddenContent(context, entry, y, cardHeight);
+    if (entry.hidden) {
+      drawHiddenExportCard(context, y, cardHeight, "simple");
+      y += cardHeight + 20;
+      return;
+    }
 
     context.fillStyle = COLORS.muted;
     context.font = '600 24px "PingFang SC", "Microsoft YaHei", sans-serif';
@@ -298,7 +332,6 @@ function drawSimpleEntries(
     context.font = '600 20px "PingFang SC", "Microsoft YaHei", sans-serif';
     context.fillText(`${entry.engagement}/10`, 455, meterY + 6);
     context.fillText(entry.energy > 0 ? `+${entry.energy}` : String(entry.energy), 813, meterY + 6);
-    endHiddenContent(context, entry, y, cardHeight);
     y += cardHeight + 20;
   });
 
@@ -315,7 +348,11 @@ function drawGaugeEntries(
     const cardHeight = 260;
     context.fillStyle = COLORS.card;
     roundedRect(context, 60, y, 960, cardHeight, 28);
-    beginHiddenContent(context, entry, y, cardHeight);
+    if (entry.hidden) {
+      drawHiddenExportCard(context, y, cardHeight, "gauges");
+      y += cardHeight + 20;
+      return;
+    }
     context.fillStyle = COLORS.muted;
     context.font = '600 24px "PingFang SC", "Microsoft YaHei", sans-serif';
     context.fillText(entryTime(entry.time, entry.createdAt), 88, y + 49);
@@ -339,7 +376,6 @@ function drawGaugeEntries(
 
     drawGauge(context, 340, y + 205, 74, entry.engagement, 0, 10, "engagement");
     drawGauge(context, 740, y + 205, 74, entry.energy, -5, 5, "energy");
-    endHiddenContent(context, entry, y, cardHeight);
     y += cardHeight + 20;
   });
 
