@@ -351,17 +351,23 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .metric-card--accent { background: var(--gold-soft); border-color: rgba(210, 168, 74, .35); }
 
 .chart-card { padding: 17px 15px 13px; margin-bottom: 12px; }
-.legend-dot { color: var(--muted); font-size: 10px; }
-.legend-dot::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; background: var(--green); }
-.energy-chart { position: relative; height: 145px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 16px; }
-.energy-chart__zero { position: absolute; top: 50%; left: 0; right: 0; border-top: 1px dashed var(--line); }
-.energy-chart__day { min-width: 0; display: grid; grid-template-rows: 120px 20px; text-align: center; }
-.energy-chart__bar-area { position: relative; height: 120px; }
-.energy-chart__bar { position: absolute; left: 50%; width: 12px; transform: translateX(-50%); min-height: 4px; border-radius: 7px; }
-.energy-chart__bar.positive { background: var(--green); }
-.energy-chart__bar.negative { background: var(--coral); }
-.energy-chart__bar.empty { background: var(--line); }
-.energy-chart__day small { color: var(--muted); font-size: 9px; }
+.chart-legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px 10px; color: var(--muted); font-size: 9px; }
+.chart-legend__item::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 3px; margin-right: 4px; }
+.chart-legend__item--engagement::before { background: var(--green); }
+.chart-legend__item--energy::before { background: var(--gold); }
+.rhythm-chart { position: relative; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 14px; }
+.rhythm-chart__zero { position: absolute; z-index: 0; top: 91px; left: 0; right: 0; border-top: 1px solid var(--line); }
+.rhythm-chart__zero span { position: absolute; top: -8px; left: -9px; color: var(--faint); background: var(--card); font-size: 8px; line-height: 14px; }
+.rhythm-chart__day { position: relative; z-index: 1; min-width: 0; display: grid; grid-template-rows: 20px 122px 18px; text-align: center; }
+.rhythm-chart__values { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 1px; color: var(--muted); font-size: 8px; font-variant-numeric: tabular-nums; }
+.rhythm-chart__values span:first-child { color: var(--green); }
+.rhythm-chart__bar-area { position: relative; height: 122px; }
+.rhythm-chart__bar { position: absolute; width: 9px; min-height: 3px; border-radius: 6px; }
+.rhythm-chart__bar--engagement { right: calc(50% + 1px); background: var(--green); }
+.rhythm-chart__bar--energy { left: calc(50% + 1px); background: var(--gold); }
+.rhythm-chart__bar--energy.is-negative { background: var(--coral); }
+.rhythm-chart__day.is-empty .rhythm-chart__bar { top: 57% !important; height: 2% !important; background: var(--line); }
+.rhythm-chart__day small { color: var(--muted); font-size: 9px; }
 
 .insight-card { display: grid; grid-template-columns: 43px 1fr; gap: 12px; padding: 16px; margin-bottom: 10px; border-radius: 18px; }
 .insight-card__icon { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 21px; font-weight: 700; }

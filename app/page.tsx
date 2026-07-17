@@ -215,6 +215,7 @@ export default function Home() {
       return {
         date,
         count: dateEntries.length,
+        engagement: average(dateEntries.map((entry) => entry.engagement)),
         energy: average(dateEntries.map((entry) => entry.energy)),
       };
     });
@@ -692,24 +693,40 @@ export default function Home() {
               <div className="paper-card chart-card">
                 <div className="section-heading">
                   <div>
-                    <p className="eyebrow">ENERGY RHYTHM</p>
+                    <p className="eyebrow">DAILY RHYTHM</p>
                     <h3>最近七天</h3>
                   </div>
-                  <span className="legend-dot">平均能量</span>
+                  <div className="chart-legend" aria-label="图表图例">
+                    <span className="chart-legend__item chart-legend__item--engagement">投入 / 10</span>
+                    <span className="chart-legend__item chart-legend__item--energy">能量 ±5</span>
+                  </div>
                 </div>
-                <div className="energy-chart">
-                  <div className="energy-chart__zero" />
+                <div className="rhythm-chart">
+                  <div className="rhythm-chart__zero"><span>0</span></div>
                   {lastSevenDays.map((day) => {
-                    const normalized = day.count ? (day.energy + 5) / 10 : 0.5;
-                    const top = day.energy >= 0 ? 50 - Math.abs(day.energy) * 8 : 50;
-                    const height = day.count ? Math.max(5, Math.abs(normalized - 0.5) * 80) : 3;
+                    const engagementHeight = day.count ? Math.max(3, day.engagement * 5.2) : 2;
+                    const energyHeight = day.count ? Math.max(3, Math.abs(day.energy) * (day.energy >= 0 ? 10.4 : 7)) : 2;
+                    const engagementValue = day.engagement.toFixed(1);
+                    const energyValue = energyText(Number(day.energy.toFixed(1)));
                     return (
-                      <div className="energy-chart__day" key={day.date}>
-                        <div className="energy-chart__bar-area">
+                      <div
+                        className={`rhythm-chart__day ${!day.count ? "is-empty" : ""}`}
+                        key={day.date}
+                        title={`${formatDate(day.date)}：${day.count ? `${day.count} 条记录，平均投入 ${engagementValue}，平均能量 ${energyValue}` : "无记录"}`}
+                        aria-label={`${formatDate(day.date)}，${day.count ? `${day.count} 条记录，平均投入 ${engagementValue}，平均能量 ${energyValue}` : "无记录"}`}
+                      >
+                        <div className="rhythm-chart__values" aria-hidden="true">
+                          <span>{day.count ? engagementValue : "—"}</span>
+                          <span>{day.count ? energyValue : "—"}</span>
+                        </div>
+                        <div className="rhythm-chart__bar-area" aria-hidden="true">
                           <span
-                            className={`energy-chart__bar ${day.energy < 0 ? "negative" : "positive"} ${!day.count ? "empty" : ""}`}
-                            style={{ top: `${top}%`, height: `${height}%` }}
-                            title={`${formatDate(day.date)}：${day.count ? energyText(Number(day.energy.toFixed(1))) : "无记录"}`}
+                            className="rhythm-chart__bar rhythm-chart__bar--engagement"
+                            style={{ top: `${58 - engagementHeight}%`, height: `${engagementHeight}%` }}
+                          />
+                          <span
+                            className={`rhythm-chart__bar rhythm-chart__bar--energy ${day.energy < 0 ? "is-negative" : "is-positive"}`}
+                            style={{ top: `${day.energy >= 0 ? 58 - energyHeight : 58}%`, height: `${energyHeight}%` }}
                           />
                         </div>
                         <small>{shortDate(day.date)}</small>
