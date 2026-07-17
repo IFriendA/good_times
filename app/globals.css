@@ -290,14 +290,15 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .sort-control button { border: 0; border-radius: 7px; padding: 6px 8px; color: var(--muted); background: transparent; font-size: 10px; cursor: pointer; }
 .sort-control button.active { color: var(--green-dark); background: var(--card); box-shadow: 0 1px 5px rgba(70, 55, 37, .1); font-weight: 700; }
 .entry-list { display: grid; gap: 12px; }
-.swipe-entry { position: relative; overflow: hidden; border: 1px solid rgba(184, 166, 139, .42); border-radius: 20px; background: #88724d; box-shadow: 0 6px 22px rgba(73, 58, 39, .075); isolation: isolate; }
-.swipe-actions { position: absolute; inset: 0 0 0 auto; width: 152px; display: grid; grid-template-columns: 76px 76px; }
+.swipe-entry { position: relative; overflow: hidden; contain: paint; border: 1px solid rgba(184, 166, 139, .42); border-radius: 20px; background: var(--card); box-shadow: 0 6px 22px rgba(73, 58, 39, .075); isolation: isolate; clip-path: inset(0 round 19px); -webkit-clip-path: inset(0 round 19px); }
+.swipe-actions { position: absolute; inset: 0 0 0 auto; width: 152px; display: grid; grid-template-columns: 76px 76px; opacity: 0; visibility: hidden; pointer-events: none; }
+.swipe-entry--actions-visible .swipe-actions { opacity: 1; visibility: visible; pointer-events: auto; }
 .swipe-actions button { border: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: white; cursor: pointer; font-size: 11px; font-weight: 700; }
 .swipe-actions button svg { width: 21px; height: 21px; }
 .swipe-actions__hide { background: linear-gradient(145deg, #a28b62, #88724d); }
 .swipe-actions__delete { background: linear-gradient(145deg, #d2785b, #b9573c); }
-.swipe-entry__card { position: relative; z-index: 1; width: 100%; margin: 0; border: 0; border-radius: 0 !important; touch-action: pan-y; transition: transform .24s cubic-bezier(.22, .78, .28, 1); will-change: transform; box-shadow: none; overflow: hidden; }
-.swipe-entry__card--dragging { transition: none; user-select: none; -webkit-user-select: none; }
+.swipe-entry__card { position: relative; z-index: 1; width: 100%; margin: 0; border: 0; border-radius: 0 !important; touch-action: pan-y; transition: transform .24s cubic-bezier(.22, .78, .28, 1); box-shadow: none; overflow: hidden; }
+.swipe-entry__card--dragging { transition: none; will-change: transform; user-select: none; -webkit-user-select: none; }
 .entry-card { padding: 16px 15px 11px; }
 .entry-card__content { transition: filter .28s ease, opacity .28s ease, transform .28s ease; }
 .entry-card__content--hidden { filter: blur(5.5px) saturate(.72); opacity: .48; transform: scale(.988); user-select: none; }

@@ -36,6 +36,7 @@ export default function SwipeableEntryCard({
   const direction = useRef<"horizontal" | "vertical" | null>(null);
 
   const offset = dragOffset ?? (isOpen ? -ACTIONS_WIDTH : 0);
+  const actionsVisible = isOpen || dragging || dragOffset !== null;
 
   function handlePointerDown(event: PointerEvent<HTMLElement>) {
     if ((event.target as Element).closest("button")) return;
@@ -44,9 +45,6 @@ export default function SwipeableEntryCard({
     startY.current = event.clientY;
     startOffset.current = isOpen ? -ACTIONS_WIDTH : 0;
     direction.current = null;
-    setDragging(true);
-    setDragOffset(startOffset.current);
-    event.currentTarget.setPointerCapture(event.pointerId);
   }
 
   function handlePointerMove(event: PointerEvent<HTMLElement>) {
@@ -56,6 +54,13 @@ export default function SwipeableEntryCard({
 
     if (!direction.current && Math.max(Math.abs(deltaX), Math.abs(deltaY)) > 7) {
       direction.current = Math.abs(deltaX) > Math.abs(deltaY) ? "horizontal" : "vertical";
+      if (direction.current === "horizontal") {
+        setDragging(true);
+        setDragOffset(startOffset.current);
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } else {
+        pointerId.current = null;
+      }
     }
     if (direction.current !== "horizontal") return;
 
@@ -65,29 +70,37 @@ export default function SwipeableEntryCard({
 
   function finishSwipe(event: PointerEvent<HTMLElement>) {
     if (pointerId.current !== event.pointerId) return;
+    const swipeDirection = direction.current;
     const finalOffset = Math.max(
       -ACTIONS_WIDTH,
       Math.min(0, startOffset.current + event.clientX - startX.current),
     );
-    const shouldOpen = direction.current === "horizontal" && finalOffset < -ACTIONS_WIDTH * 0.36;
+    const shouldOpen = swipeDirection === "horizontal" && finalOffset < -ACTIONS_WIDTH * 0.36;
     pointerId.current = null;
     direction.current = null;
     setDragging(false);
-    setDragOffset(null);
-    if (shouldOpen) onOpen();
-    else onClose();
+    if (swipeDirection === "horizontal") {
+      const targetOffset = shouldOpen ? -ACTIONS_WIDTH : 0;
+      setDragOffset(Math.abs(finalOffset - targetOffset) < 0.5 ? null : targetOffset);
+      if (shouldOpen) onOpen();
+      else onClose();
+    } else if (!swipeDirection && isOpen) {
+      setDragOffset(0);
+      onClose();
+    }
   }
 
   const hidden = entry.hidden === true;
 
   return (
-    <div className={`swipe-entry ${isOpen ? "swipe-entry--open" : ""}`}>
-      <div className="swipe-actions" aria-hidden={!isOpen}>
+    <div className={`swipe-entry ${isOpen ? "swipe-entry--open" : ""} ${actionsVisible ? "swipe-entry--actions-visible" : ""}`}>
+      <div className="swipe-actions" aria-hidden={!actionsVisible}>
         <button
           className="swipe-actions__hide"
           type="button"
           onClick={() => {
             onToggleHidden();
+            setDragOffset(0);
             onClose();
           }}
           tabIndex={isOpen ? 0 : -1}
@@ -108,11 +121,14 @@ export default function SwipeableEntryCard({
 
       <article
         className={`entry-card paper-card swipe-entry__card ${dragging ? "swipe-entry__card--dragging" : ""}`}
-        style={{ transform: `translate3d(${offset}px, 0, 0)` }}
+        style={offset === 0 ? undefined : { transform: `translateX(${offset}px)` }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={finishSwipe}
         onPointerCancel={finishSwipe}
+        onTransitionEnd={(event) => {
+          if (event.propertyName === "transform" && !dragging) setDragOffset(null);
+        }}
       >
         <button className="entry-card__edit" type="button" onClick={onEdit} aria-label={`编辑${entry.title}`}>
           <EditIcon size={18} />
