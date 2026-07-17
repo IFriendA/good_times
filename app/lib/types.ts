@@ -1,6 +1,7 @@
 export type ActivityEntry = {
   id: string;
   date: string;
+  time?: string;
   title: string;
   detail: string;
   engagement: number;
@@ -24,6 +25,7 @@ export function isActivityEntry(value: unknown): value is ActivityEntry {
   return (
     typeof entry.id === "string" &&
     /^\d{4}-\d{2}-\d{2}$/.test(entry.date ?? "") &&
+    (entry.time === undefined || /^([01]\d|2[0-3]):[0-5]\d$/.test(entry.time)) &&
     typeof entry.title === "string" &&
     typeof entry.detail === "string" &&
     typeof entry.engagement === "number" &&

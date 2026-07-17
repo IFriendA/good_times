@@ -206,6 +206,29 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .text-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(97, 116, 90, .12); }
 .text-input::placeholder { color: #afa598; font-weight: 400; }
 
+.time-field {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #fffefb;
+  cursor: pointer;
+}
+.time-field input {
+  min-width: 112px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.time-field span { color: var(--muted); font-size: 11px; }
+
 .gauge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 22px 0 12px; }
 .gauge { min-width: 0; padding: 12px 10px 9px; border: 1px solid var(--line); border-radius: 16px; background: #faf7f0; }
 .gauge__heading { display: flex; justify-content: space-between; align-items: baseline; color: var(--muted); font-size: 12px; }
@@ -259,13 +282,19 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .primary-button { width: 100%; padding: 14px 18px; color: white; background: var(--green); box-shadow: 0 8px 18px rgba(64, 83, 59, .18); }
 .secondary-button { padding: 10px 17px; color: var(--green-dark); background: var(--green-soft); }
 
-.entries-heading { display: flex; align-items: baseline; justify-content: space-between; margin: 27px 3px 12px; }
+.entries-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 27px 3px 12px; }
+.entries-heading > div:first-child { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .entries-heading h2 { margin: 0; font-family: var(--font-serif), serif; font-size: 19px; }
 .entries-heading span { color: var(--muted); font-size: 12px; }
+.sort-control { flex: 0 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 3px; border-radius: 10px; background: var(--paper-deep); }
+.sort-control button { border: 0; border-radius: 7px; padding: 6px 8px; color: var(--muted); background: transparent; font-size: 10px; cursor: pointer; }
+.sort-control button.active { color: var(--green-dark); background: var(--card); box-shadow: 0 1px 5px rgba(70, 55, 37, .1); font-weight: 700; }
 .entry-list { display: grid; gap: 12px; }
 .entry-card { padding: 16px 15px 11px; }
 .entry-card__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .entry-card h3 { margin: 0; font-size: 17px; line-height: 1.4; }
+.entry-card__title-row { display: flex; align-items: center; gap: 9px; }
+.entry-card__title-row time { flex: 0 0 auto; padding: 4px 7px; border-radius: 8px; color: var(--green-dark); background: var(--green-soft); font-size: 11px; font-weight: 750; font-variant-numeric: tabular-nums; }
 .entry-card p { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
 .flow-badge { flex: 0 0 auto; display: flex; align-items: center; gap: 3px; padding: 5px 8px; border-radius: 20px; color: #856614; background: var(--gold-soft); font-size: 11px; font-weight: 700; }
 .entry-card__gauges { display: grid; grid-template-columns: 1fr 1fr; margin: 8px -5px -5px; }

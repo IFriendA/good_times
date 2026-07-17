@@ -1,4 +1,4 @@
-import { formatDate } from "./date";
+import { entryTime, formatDate } from "./date";
 import { ActivityEntry, BackupFile } from "./types";
 
 export type ShareStyle = "simple" | "gauges";
@@ -222,18 +222,18 @@ function drawSimpleEntries(
   const visibleEntries = entries.slice(0, 5);
   let y = 250;
 
-  visibleEntries.forEach((entry, index) => {
+  visibleEntries.forEach((entry) => {
     const cardHeight = entry.detail ? 178 : 144;
     context.fillStyle = COLORS.card;
     roundedRect(context, 60, y, 960, cardHeight, 28);
 
     context.fillStyle = COLORS.muted;
     context.font = '600 24px "PingFang SC", "Microsoft YaHei", sans-serif';
-    context.fillText(String(index + 1).padStart(2, "0"), 90, y + 49);
+    context.fillText(entryTime(entry.time, entry.createdAt), 88, y + 49);
 
     context.fillStyle = COLORS.ink;
     context.font = '600 34px "PingFang SC", "Microsoft YaHei", sans-serif';
-    context.fillText(wrapText(context, entry.title, 580, 1)[0] ?? "", 142, y + 52);
+    context.fillText(wrapText(context, entry.title, 540, 1)[0] ?? "", 184, y + 52);
 
     if (entry.flow) {
       context.fillStyle = COLORS.gold;
@@ -246,7 +246,7 @@ function drawSimpleEntries(
     if (entry.detail) {
       context.fillStyle = COLORS.muted;
       context.font = '400 25px "PingFang SC", "Microsoft YaHei", sans-serif';
-      context.fillText(wrapText(context, entry.detail, 800, 1)[0] ?? "", 142, y + 92);
+      context.fillText(wrapText(context, entry.detail, 760, 1)[0] ?? "", 184, y + 92);
     }
 
     const meterY = y + cardHeight - 38;
@@ -282,16 +282,16 @@ function drawGaugeEntries(
   const visibleEntries = entries.slice(0, 4);
   let y = 250;
 
-  visibleEntries.forEach((entry, index) => {
+  visibleEntries.forEach((entry) => {
     const cardHeight = 260;
     context.fillStyle = COLORS.card;
     roundedRect(context, 60, y, 960, cardHeight, 28);
     context.fillStyle = COLORS.muted;
     context.font = '600 24px "PingFang SC", "Microsoft YaHei", sans-serif';
-    context.fillText(String(index + 1).padStart(2, "0"), 90, y + 49);
+    context.fillText(entryTime(entry.time, entry.createdAt), 88, y + 49);
     context.fillStyle = COLORS.ink;
     context.font = '600 34px "PingFang SC", "Microsoft YaHei", sans-serif';
-    context.fillText(wrapText(context, entry.title, 580, 1)[0] ?? "", 142, y + 52);
+    context.fillText(wrapText(context, entry.title, 540, 1)[0] ?? "", 184, y + 52);
 
     if (entry.flow) {
       context.fillStyle = COLORS.gold;
@@ -304,7 +304,7 @@ function drawGaugeEntries(
     if (entry.detail) {
       context.fillStyle = COLORS.muted;
       context.font = '400 23px "PingFang SC", "Microsoft YaHei", sans-serif';
-      context.fillText(wrapText(context, entry.detail, 760, 1)[0] ?? "", 142, y + 88);
+      context.fillText(wrapText(context, entry.detail, 720, 1)[0] ?? "", 184, y + 88);
     }
 
     drawGauge(context, 340, y + 205, 74, entry.engagement, 0, 10, "engagement");

@@ -1,18 +1,38 @@
+import { entryTime } from "./date";
 import { ActivityEntry } from "./types";
 
 const DB_NAME = "good-times-journal";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = "entries";
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const database = request.result;
       if (!database.objectStoreNames.contains(STORE_NAME)) {
         const store = database.createObjectStore(STORE_NAME, { keyPath: "id" });
         store.createIndex("date", "date", { unique: false });
+      }
+
+      if (event.oldVersion < 2 && database.objectStoreNames.contains(STORE_NAME)) {
+        const store = request.transaction?.objectStore(STORE_NAME);
+        const cursorRequest = store?.openCursor();
+        if (cursorRequest) {
+          cursorRequest.onsuccess = () => {
+            const cursor = cursorRequest.result;
+            if (!cursor) return;
+            const entry = cursor.value as ActivityEntry;
+            if (!entry.time) {
+              cursor.update({
+                ...entry,
+                time: entryTime(entry.time, entry.createdAt),
+              });
+            }
+            cursor.continue();
+          };
+        }
       }
     };
 
@@ -43,10 +63,16 @@ export async function getEntries(): Promise<ActivityEntry[]> {
     store.getAll(),
   );
 
-  return entries.sort((a, b) => {
+  return entries
+    .map((entry) => ({
+      ...entry,
+      time: entryTime(entry.time, entry.createdAt),
+    }))
+    .sort((a, b) => {
     if (a.date !== b.date) return b.date.localeCompare(a.date);
-    return b.createdAt.localeCompare(a.createdAt);
-  });
+    const timeComparison = entryTime(b.time, b.createdAt).localeCompare(entryTime(a.time, a.createdAt));
+    return timeComparison || b.createdAt.localeCompare(a.createdAt);
+    });
 }
 
 export async function saveEntry(entry: ActivityEntry): Promise<void> {

@@ -17,16 +17,18 @@ import {
   TrashIcon,
   UploadIcon,
 } from "./components/Icons";
-import { formatDate, shiftDate, shortDate, todayKey } from "./lib/date";
+import { currentTimeKey, entryTime, formatDate, shiftDate, shortDate, todayKey } from "./lib/date";
 import { clearEntries, deleteEntry, getEntries, saveEntries, saveEntry } from "./lib/storage";
 import { createDailyImage, exportBackup, shareDailyImage, ShareStyle } from "./lib/share";
 import { ActivityEntry, isActivityEntry } from "./lib/types";
 
 type Tab = "journal" | "review" | "settings";
 type ReviewRange = "7" | "30" | "all";
+type SortOrder = "asc" | "desc";
 
 type FormState = {
   id: string | null;
+  time: string;
   title: string;
   detail: string;
   engagement: number;
@@ -36,6 +38,7 @@ type FormState = {
 
 const EMPTY_FORM: FormState = {
   id: null,
+  time: "",
   title: "",
   detail: "",
   engagement: 5,
@@ -90,6 +93,7 @@ export default function Home() {
   const [formOpen, setFormOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [reviewRange, setReviewRange] = useState<ReviewRange>("7");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [toast, setToast] = useState("");
   const [nickname, setNickname] = useState("");
   const [nicknameDraft, setNicknameDraft] = useState("");
@@ -99,14 +103,17 @@ export default function Home() {
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const timeInputRef = useRef<HTMLInputElement>(null);
   const previewBlobRef = useRef<Blob | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setSelectedDate(todayKey());
     const savedNickname = window.localStorage.getItem("good-times-nickname") ?? "";
+    const savedSortOrder = window.localStorage.getItem("good-times-sort-order");
     setNickname(savedNickname);
     setNicknameDraft(savedNickname);
+    if (savedSortOrder === "asc" || savedSortOrder === "desc") setSortOrder(savedSortOrder);
     getEntries()
       .then(setEntries)
       .catch(() => setToast("读取本地记录失败，请刷新后重试"))
@@ -129,8 +136,12 @@ export default function Home() {
     () =>
       entries
         .filter((entry) => entry.date === selectedDate)
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    [entries, selectedDate],
+        .sort((a, b) => {
+          const timeComparison = entryTime(a.time, a.createdAt).localeCompare(entryTime(b.time, b.createdAt));
+          const stableComparison = timeComparison || a.createdAt.localeCompare(b.createdAt);
+          return sortOrder === "asc" ? stableComparison : -stableComparison;
+        }),
+    [entries, selectedDate, sortOrder],
   );
 
   useEffect(() => {
@@ -205,7 +216,7 @@ export default function Home() {
   }
 
   function openNewEntry() {
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, time: currentTimeKey() });
     setFormOpen(true);
     window.setTimeout(() => {
       document.querySelector<HTMLInputElement>("#activity-title")?.focus();
@@ -215,6 +226,7 @@ export default function Home() {
   function editActivity(entry: ActivityEntry) {
     setForm({
       id: entry.id,
+      time: entryTime(entry.time, entry.createdAt),
       title: entry.title,
       detail: entry.detail,
       engagement: entry.engagement,
@@ -235,6 +247,7 @@ export default function Home() {
     const entry: ActivityEntry = {
       id: existing?.id ?? crypto.randomUUID(),
       date: selectedDate,
+      time: form.time || currentTimeKey(),
       title,
       detail: form.detail.trim(),
       engagement: form.engagement,
@@ -339,6 +352,22 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function changeSortOrder(order: SortOrder) {
+    setSortOrder(order);
+    window.localStorage.setItem("good-times-sort-order", order);
+  }
+
+  function openTimePicker() {
+    const input = timeInputRef.current;
+    if (!input) return;
+    input.focus();
+    try {
+      input.showPicker?.();
+    } catch {
+      // 不支持 showPicker 的浏览器仍会通过 label 的默认行为聚焦输入框。
+    }
+  }
+
   if (!selectedDate) {
     return <main className="app-shell app-shell--loading">正在翻开日志…</main>;
   }
@@ -402,6 +431,19 @@ export default function Home() {
                 </div>
                 <button className="text-button" type="button" onClick={resetForm}>取消</button>
               </div>
+
+              <label className="field-label" htmlFor="activity-time">时间</label>
+              <label className="time-field" htmlFor="activity-time" onClick={openTimePicker}>
+                <input
+                  ref={timeInputRef}
+                  id="activity-time"
+                  type="time"
+                  value={form.time}
+                  onChange={(event) => setForm((current) => ({ ...current, time: event.target.value }))}
+                  required
+                />
+                <span>这项活动发生在什么时候</span>
+              </label>
 
               <label className="field-label" htmlFor="activity-title">活动</label>
               <input
@@ -467,8 +509,28 @@ export default function Home() {
           )}
 
           <div className="entries-heading">
-            <h2>当天活动</h2>
-            <span>{dayEntries.length} 条记录</span>
+            <div>
+              <h2>当天活动</h2>
+              <span>{dayEntries.length} 条记录</span>
+            </div>
+            <div className="sort-control" aria-label="记录排列顺序">
+              <button
+                type="button"
+                className={sortOrder === "asc" ? "active" : ""}
+                onClick={() => changeSortOrder("asc")}
+                aria-label="按时间从早到晚排列"
+              >
+                早 → 晚
+              </button>
+              <button
+                type="button"
+                className={sortOrder === "desc" ? "active" : ""}
+                onClick={() => changeSortOrder("desc")}
+                aria-label="按时间从晚到早排列"
+              >
+                晚 → 早
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -479,7 +541,12 @@ export default function Home() {
                 <article className="entry-card paper-card" key={entry.id}>
                   <div className="entry-card__top">
                     <div>
-                      <h3>{entry.title}</h3>
+                      <div className="entry-card__title-row">
+                        <time dateTime={`${entry.date}T${entryTime(entry.time, entry.createdAt)}`}>
+                          {entryTime(entry.time, entry.createdAt)}
+                        </time>
+                        <h3>{entry.title}</h3>
+                      </div>
                       {entry.detail && <p>{entry.detail}</p>}
                     </div>
                     {entry.flow && <span className="flow-badge"><SparkleIcon size={15} /> 心流</span>}
