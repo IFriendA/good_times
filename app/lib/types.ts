@@ -7,6 +7,7 @@ export type ActivityEntry = {
   engagement: number;
   energy: number;
   flow: boolean;
+  hidden?: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -35,6 +36,7 @@ export function isActivityEntry(value: unknown): value is ActivityEntry {
     entry.energy >= -5 &&
     entry.energy <= 5 &&
     typeof entry.flow === "boolean" &&
+    (entry.hidden === undefined || typeof entry.hidden === "boolean") &&
     typeof entry.createdAt === "string" &&
     typeof entry.updatedAt === "string"
   );

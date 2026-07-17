@@ -54,3 +54,9 @@ export const UploadIcon = (props: IconProps) => (
 export const SparkleIcon = (props: IconProps) => (
   <Svg {...props}><path d="m12 3 1.3 4.2L17 9l-3.7 1.8L12 15l-1.3-4.2L7 9l3.7-1.8Z" /><path d="m19 15 .6 1.9L21 18l-1.4 1.1L19 21l-.6-1.9L17 18l1.4-1.1Z" /></Svg>
 );
+export const EyeIcon = (props: IconProps) => (
+  <Svg {...props}><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.5" /></Svg>
+);
+export const EyeOffIcon = (props: IconProps) => (
+  <Svg {...props}><path d="m3 3 18 18M10.6 6.2A9.8 9.8 0 0 1 12 6c6 0 9.5 6 9.5 6a15 15 0 0 1-2.1 2.7M6.6 6.6C4 8.3 2.5 12 2.5 12s3.5 6 9.5 6a9.8 9.8 0 0 0 4-.8M9.9 9.9a3 3 0 0 0 4.2 4.2" /></Svg>
+);

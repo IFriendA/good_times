@@ -2,7 +2,7 @@ import { entryTime } from "./date";
 import { ActivityEntry } from "./types";
 
 const DB_NAME = "good-times-journal";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = "entries";
 
 function openDatabase(): Promise<IDBDatabase> {
@@ -16,7 +16,7 @@ function openDatabase(): Promise<IDBDatabase> {
         store.createIndex("date", "date", { unique: false });
       }
 
-      if (event.oldVersion < 2 && database.objectStoreNames.contains(STORE_NAME)) {
+      if (event.oldVersion < 3 && database.objectStoreNames.contains(STORE_NAME)) {
         const store = request.transaction?.objectStore(STORE_NAME);
         const cursorRequest = store?.openCursor();
         if (cursorRequest) {
@@ -24,10 +24,11 @@ function openDatabase(): Promise<IDBDatabase> {
             const cursor = cursorRequest.result;
             if (!cursor) return;
             const entry = cursor.value as ActivityEntry;
-            if (!entry.time) {
+            if (!entry.time || typeof entry.hidden !== "boolean") {
               cursor.update({
                 ...entry,
                 time: entryTime(entry.time, entry.createdAt),
+                hidden: entry.hidden === true,
               });
             }
             cursor.continue();
@@ -67,6 +68,7 @@ export async function getEntries(): Promise<ActivityEntry[]> {
     .map((entry) => ({
       ...entry,
       time: entryTime(entry.time, entry.createdAt),
+      hidden: entry.hidden === true,
     }))
     .sort((a, b) => {
     if (a.date !== b.date) return b.date.localeCompare(a.date);

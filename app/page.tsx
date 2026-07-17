@@ -3,18 +3,17 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Gauge from "./components/Gauge";
+import SwipeableEntryCard from "./components/SwipeableEntryCard";
 import {
   ChartIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   DownloadIcon,
-  EditIcon,
   JournalIcon,
   PlusIcon,
   SettingsIcon,
   ShareIcon,
   SparkleIcon,
-  TrashIcon,
   UploadIcon,
 } from "./components/Icons";
 import { currentTimeKey, entryTime, formatDate, shiftDate, shortDate, todayKey } from "./lib/date";
@@ -94,6 +93,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [reviewRange, setReviewRange] = useState<ReviewRange>("7");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [openSwipeId, setOpenSwipeId] = useState<string | null>(null);
   const [toast, setToast] = useState("");
   const [nickname, setNickname] = useState("");
   const [nicknameDraft, setNicknameDraft] = useState("");
@@ -177,9 +177,10 @@ export default function Home() {
   }, [shareOpen, nickname, nicknameEditing, selectedDate, dayEntries, shareStyle]);
 
   const reviewEntries = useMemo(() => {
-    if (reviewRange === "all") return entries;
+    const visibleEntries = entries.filter((entry) => entry.hidden !== true);
+    if (reviewRange === "all") return visibleEntries;
     const cutoff = shiftDate(todayKey(), -(Number(reviewRange) - 1));
-    return entries.filter((entry) => entry.date >= cutoff);
+    return visibleEntries.filter((entry) => entry.date >= cutoff);
   }, [entries, reviewRange]);
 
   const activityGroups = useMemo(() => makeActivityGroups(reviewEntries), [reviewEntries]);
@@ -201,7 +202,7 @@ export default function Home() {
   const lastSevenDays = useMemo(() => {
     const today = todayKey();
     return Array.from({ length: 7 }, (_, index) => shiftDate(today, index - 6)).map((date) => {
-      const dateEntries = entries.filter((entry) => entry.date === date);
+      const dateEntries = entries.filter((entry) => entry.date === date && entry.hidden !== true);
       return {
         date,
         count: dateEntries.length,
@@ -253,6 +254,7 @@ export default function Home() {
       engagement: form.engagement,
       energy: form.energy,
       flow: form.flow,
+      hidden: existing?.hidden === true,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };
@@ -275,10 +277,26 @@ export default function Home() {
     try {
       await deleteEntry(entry.id);
       setEntries((current) => current.filter((item) => item.id !== entry.id));
+      setOpenSwipeId(null);
       if (form.id === entry.id) resetForm();
       showToast("记录已删除");
     } catch {
       showToast("删除失败，请稍后重试");
+    }
+  }
+
+  async function handleToggleHidden(entry: ActivityEntry) {
+    const updatedEntry: ActivityEntry = {
+      ...entry,
+      hidden: entry.hidden !== true,
+      updatedAt: new Date().toISOString(),
+    };
+    try {
+      await saveEntry(updatedEntry);
+      setEntries((current) => current.map((item) => item.id === entry.id ? updatedEntry : item));
+      showToast(updatedEntry.hidden ? "这条记录已隐藏" : "这条记录已恢复显示");
+    } catch {
+      showToast("操作失败，请稍后重试");
     }
   }
 
@@ -538,28 +556,16 @@ export default function Home() {
           ) : dayEntries.length ? (
             <div className="entry-list">
               {dayEntries.map((entry) => (
-                <article className="entry-card paper-card" key={entry.id}>
-                  <div className="entry-card__top">
-                    <div>
-                      <div className="entry-card__title-row">
-                        <time dateTime={`${entry.date}T${entryTime(entry.time, entry.createdAt)}`}>
-                          {entryTime(entry.time, entry.createdAt)}
-                        </time>
-                        <h3>{entry.title}</h3>
-                      </div>
-                      {entry.detail && <p>{entry.detail}</p>}
-                    </div>
-                    {entry.flow && <span className="flow-badge"><SparkleIcon size={15} /> 心流</span>}
-                  </div>
-                  <div className="entry-card__gauges">
-                    <Gauge kind="engagement" value={entry.engagement} compact />
-                    <Gauge kind="energy" value={entry.energy} compact />
-                  </div>
-                  <div className="entry-card__actions">
-                    <button type="button" onClick={() => editActivity(entry)}><EditIcon size={17} /> 编辑</button>
-                    <button type="button" onClick={() => handleDelete(entry)}><TrashIcon size={17} /> 删除</button>
-                  </div>
-                </article>
+                <SwipeableEntryCard
+                  key={entry.id}
+                  entry={entry}
+                  isOpen={openSwipeId === entry.id}
+                  onOpen={() => setOpenSwipeId(entry.id)}
+                  onClose={() => setOpenSwipeId((current) => current === entry.id ? null : current)}
+                  onEdit={() => editActivity(entry)}
+                  onDelete={() => handleDelete(entry)}
+                  onToggleHidden={() => handleToggleHidden(entry)}
+                />
               ))}
             </div>
           ) : (
@@ -781,7 +787,7 @@ export default function Home() {
                     onClick={() => setShareStyle("simple")}
                   >
                     <span className="style-icon style-icon--simple"><i /><i /><i /></span>
-                    <span><strong>简洁清单</strong><small>重点信息一目了然</small></span>
+                    <span><strong>简洁长图</strong><small>全部记录清晰排列</small></span>
                   </button>
                   <button
                     type="button"
@@ -789,7 +795,7 @@ export default function Home() {
                     onClick={() => setShareStyle("gauges")}
                   >
                     <span className="style-icon style-icon--gauge"><i /></span>
-                    <span><strong>仪表盘</strong><small>保留投入与能量指针</small></span>
+                    <span><strong>仪表盘长图</strong><small>全部记录保留指针</small></span>
                   </button>
                 </div>
 

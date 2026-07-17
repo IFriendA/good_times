@@ -200,18 +200,47 @@ function drawHeader(
 function drawFooter(
   context: CanvasRenderingContext2D,
   nickname: string,
-  hiddenCount: number,
+  canvasHeight: number,
 ) {
-  if (hiddenCount > 0) {
-    context.fillStyle = COLORS.muted;
-    context.font = '500 22px "PingFang SC", "Microsoft YaHei", sans-serif';
-    context.fillText(`还有 ${hiddenCount} 条活动，请在日志中查看`, 72, 1415);
-  }
   context.fillStyle = COLORS.muted;
   context.font = '400 22px "PingFang SC", "Microsoft YaHei", sans-serif';
-  context.fillText("留意投入与能量，找到属于自己的方向", 72, 1465);
+  context.fillText("留意投入与能量，找到属于自己的方向", 72, canvasHeight - 36);
   context.textAlign = "right";
-  context.fillText(`${nickname} · GOOD TIMES`, 1008, 1465);
+  context.fillText(`${nickname} · GOOD TIMES`, 1008, canvasHeight - 36);
+  context.textAlign = "start";
+}
+
+function beginHiddenContent(
+  context: CanvasRenderingContext2D,
+  entry: ActivityEntry,
+  y: number,
+  cardHeight: number,
+) {
+  if (!entry.hidden) return;
+  context.save();
+  context.beginPath();
+  context.roundRect(60, y, 960, cardHeight, 28);
+  context.clip();
+  context.filter = "blur(11px)";
+  context.globalAlpha = 0.5;
+}
+
+function endHiddenContent(
+  context: CanvasRenderingContext2D,
+  entry: ActivityEntry,
+  y: number,
+  cardHeight: number,
+) {
+  if (!entry.hidden) return;
+  context.restore();
+  context.fillStyle = "rgba(255, 253, 248, .28)";
+  roundedRect(context, 60, y, 960, cardHeight, 28);
+  context.fillStyle = "rgba(97, 116, 90, .88)";
+  roundedRect(context, 438, y + cardHeight / 2 - 24, 204, 48, 24);
+  context.fillStyle = "#fff";
+  context.font = '600 22px "PingFang SC", "Microsoft YaHei", sans-serif';
+  context.textAlign = "center";
+  context.fillText("此条记录已隐藏", 540, y + cardHeight / 2 + 8);
   context.textAlign = "start";
 }
 
@@ -219,13 +248,13 @@ function drawSimpleEntries(
   context: CanvasRenderingContext2D,
   entries: ActivityEntry[],
 ) {
-  const visibleEntries = entries.slice(0, 5);
   let y = 250;
 
-  visibleEntries.forEach((entry) => {
+  entries.forEach((entry) => {
     const cardHeight = entry.detail ? 178 : 144;
     context.fillStyle = COLORS.card;
     roundedRect(context, 60, y, 960, cardHeight, 28);
+    beginHiddenContent(context, entry, y, cardHeight);
 
     context.fillStyle = COLORS.muted;
     context.font = '600 24px "PingFang SC", "Microsoft YaHei", sans-serif';
@@ -269,23 +298,24 @@ function drawSimpleEntries(
     context.font = '600 20px "PingFang SC", "Microsoft YaHei", sans-serif';
     context.fillText(`${entry.engagement}/10`, 455, meterY + 6);
     context.fillText(entry.energy > 0 ? `+${entry.energy}` : String(entry.energy), 813, meterY + 6);
+    endHiddenContent(context, entry, y, cardHeight);
     y += cardHeight + 20;
   });
 
-  return entries.length - visibleEntries.length;
+  return y;
 }
 
 function drawGaugeEntries(
   context: CanvasRenderingContext2D,
   entries: ActivityEntry[],
 ) {
-  const visibleEntries = entries.slice(0, 4);
   let y = 250;
 
-  visibleEntries.forEach((entry) => {
+  entries.forEach((entry) => {
     const cardHeight = 260;
     context.fillStyle = COLORS.card;
     roundedRect(context, 60, y, 960, cardHeight, 28);
+    beginHiddenContent(context, entry, y, cardHeight);
     context.fillStyle = COLORS.muted;
     context.font = '600 24px "PingFang SC", "Microsoft YaHei", sans-serif';
     context.fillText(entryTime(entry.time, entry.createdAt), 88, y + 49);
@@ -309,10 +339,11 @@ function drawGaugeEntries(
 
     drawGauge(context, 340, y + 205, 74, entry.engagement, 0, 10, "engagement");
     drawGauge(context, 740, y + 205, 74, entry.energy, -5, 5, "energy");
+    endHiddenContent(context, entry, y, cardHeight);
     y += cardHeight + 20;
   });
 
-  return entries.length - visibleEntries.length;
+  return y;
 }
 
 function makeDailyCanvas(
@@ -323,7 +354,12 @@ function makeDailyCanvas(
 ): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
-  canvas.height = 1500;
+  const contentHeight = entries.length
+    ? style === "gauges"
+      ? 250 + entries.length * 280
+      : 250 + entries.reduce((height, entry) => height + (entry.detail ? 198 : 164), 0)
+    : 640;
+  canvas.height = Math.max(1500, contentHeight + 110);
   const context = canvas.getContext("2d");
   if (!context) throw new Error("无法生成分享图片");
 
@@ -331,11 +367,9 @@ function makeDailyCanvas(
   context.fillRect(0, 0, canvas.width, canvas.height);
   drawHeader(context, date, nickname);
 
-  let hiddenCount = 0;
   if (entries.length) {
-    hiddenCount = style === "gauges"
-      ? drawGaugeEntries(context, entries)
-      : drawSimpleEntries(context, entries);
+    if (style === "gauges") drawGaugeEntries(context, entries);
+    else drawSimpleEntries(context, entries);
   } else {
     context.fillStyle = COLORS.card;
     roundedRect(context, 60, 270, 960, 330, 32);
@@ -346,7 +380,7 @@ function makeDailyCanvas(
     context.textAlign = "start";
   }
 
-  drawFooter(context, nickname, hiddenCount);
+  drawFooter(context, nickname, canvas.height);
   return canvas;
 }
 
