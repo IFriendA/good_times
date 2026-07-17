@@ -25,6 +25,23 @@ export function entryTime(time: string | undefined, createdAt: string): string {
   return Number.isNaN(createdDate.getTime()) ? "12:00" : toTimeKey(createdDate);
 }
 
+export function entryDayOffset(
+  dayOffset: number | undefined,
+  journalDate: string,
+  createdAt: string,
+): 0 | 1 {
+  if (dayOffset === 1) return 1;
+  if (dayOffset === 0) return 0;
+  const createdDate = new Date(createdAt);
+  if (Number.isNaN(createdDate.getTime())) return 0;
+  return toDateKey(createdDate) === shiftDate(journalDate, 1) ? 1 : 0;
+}
+
+export function entryTimeLabel(dayOffset: number | undefined, time: string | undefined, createdAt: string) {
+  const value = entryTime(time, createdAt);
+  return dayOffset === 1 ? `次日 ${value}` : value;
+}
+
 export function shiftDate(dateKey: string, days: number): string {
   const date = new Date(`${dateKey}T12:00:00`);
   date.setDate(date.getDate() + days);

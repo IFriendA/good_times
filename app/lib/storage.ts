@@ -1,8 +1,8 @@
-import { entryTime } from "./date";
+import { entryDayOffset, entryTime } from "./date";
 import { ActivityEntry } from "./types";
 
 const DB_NAME = "good-times-journal";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const STORE_NAME = "entries";
 
 function openDatabase(): Promise<IDBDatabase> {
@@ -16,7 +16,7 @@ function openDatabase(): Promise<IDBDatabase> {
         store.createIndex("date", "date", { unique: false });
       }
 
-      if (event.oldVersion < 3 && database.objectStoreNames.contains(STORE_NAME)) {
+      if (event.oldVersion < 4 && database.objectStoreNames.contains(STORE_NAME)) {
         const store = request.transaction?.objectStore(STORE_NAME);
         const cursorRequest = store?.openCursor();
         if (cursorRequest) {
@@ -24,13 +24,12 @@ function openDatabase(): Promise<IDBDatabase> {
             const cursor = cursorRequest.result;
             if (!cursor) return;
             const entry = cursor.value as ActivityEntry;
-            if (!entry.time || typeof entry.hidden !== "boolean") {
-              cursor.update({
-                ...entry,
-                time: entryTime(entry.time, entry.createdAt),
-                hidden: entry.hidden === true,
-              });
-            }
+            cursor.update({
+              ...entry,
+              time: entryTime(entry.time, entry.createdAt),
+              hidden: entry.hidden === true,
+              dayOffset: entryDayOffset(entry.dayOffset, entry.date, entry.createdAt),
+            });
             cursor.continue();
           };
         }
@@ -68,10 +67,13 @@ export async function getEntries(): Promise<ActivityEntry[]> {
     .map((entry) => ({
       ...entry,
       time: entryTime(entry.time, entry.createdAt),
+      dayOffset: entryDayOffset(entry.dayOffset, entry.date, entry.createdAt),
       hidden: entry.hidden === true,
     }))
     .sort((a, b) => {
     if (a.date !== b.date) return b.date.localeCompare(a.date);
+    const offsetComparison = (b.dayOffset ?? 0) - (a.dayOffset ?? 0);
+    if (offsetComparison) return offsetComparison;
     const timeComparison = entryTime(b.time, b.createdAt).localeCompare(entryTime(a.time, a.createdAt));
     return timeComparison || b.createdAt.localeCompare(a.createdAt);
     });

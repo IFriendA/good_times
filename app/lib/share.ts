@@ -1,4 +1,4 @@
-import { entryTime, formatDate } from "./date";
+import { entryDayOffset, entryTimeLabel, formatDate } from "./date";
 import { ActivityEntry, BackupFile } from "./types";
 
 export type ShareStyle = "simple" | "gauges";
@@ -290,13 +290,16 @@ function drawSimpleEntries(
       return;
     }
 
+    const dayOffset = entryDayOffset(entry.dayOffset, entry.date, entry.createdAt);
+    const timeLabel = entryTimeLabel(dayOffset, entry.time, entry.createdAt);
+    const titleX = dayOffset === 1 ? 244 : 184;
     context.fillStyle = COLORS.muted;
     context.font = '600 24px "PingFang SC", "Microsoft YaHei", sans-serif';
-    context.fillText(entryTime(entry.time, entry.createdAt), 88, y + 49);
+    context.fillText(timeLabel, 88, y + 49);
 
     context.fillStyle = COLORS.ink;
     context.font = '600 34px "PingFang SC", "Microsoft YaHei", sans-serif';
-    context.fillText(wrapText(context, entry.title, 540, 1)[0] ?? "", 184, y + 52);
+    context.fillText(wrapText(context, entry.title, dayOffset === 1 ? 480 : 540, 1)[0] ?? "", titleX, y + 52);
 
     if (entry.flow) {
       context.fillStyle = COLORS.gold;
@@ -309,7 +312,7 @@ function drawSimpleEntries(
     if (entry.detail) {
       context.fillStyle = COLORS.muted;
       context.font = '400 25px "PingFang SC", "Microsoft YaHei", sans-serif';
-      context.fillText(wrapText(context, entry.detail, 760, 1)[0] ?? "", 184, y + 92);
+      context.fillText(wrapText(context, entry.detail, dayOffset === 1 ? 700 : 760, 1)[0] ?? "", titleX, y + 92);
     }
 
     const meterY = y + cardHeight - 38;
@@ -353,12 +356,15 @@ function drawGaugeEntries(
       y += cardHeight + 20;
       return;
     }
+    const dayOffset = entryDayOffset(entry.dayOffset, entry.date, entry.createdAt);
+    const timeLabel = entryTimeLabel(dayOffset, entry.time, entry.createdAt);
+    const titleX = dayOffset === 1 ? 244 : 184;
     context.fillStyle = COLORS.muted;
     context.font = '600 24px "PingFang SC", "Microsoft YaHei", sans-serif';
-    context.fillText(entryTime(entry.time, entry.createdAt), 88, y + 49);
+    context.fillText(timeLabel, 88, y + 49);
     context.fillStyle = COLORS.ink;
     context.font = '600 34px "PingFang SC", "Microsoft YaHei", sans-serif';
-    context.fillText(wrapText(context, entry.title, 540, 1)[0] ?? "", 184, y + 52);
+    context.fillText(wrapText(context, entry.title, dayOffset === 1 ? 480 : 540, 1)[0] ?? "", titleX, y + 52);
 
     if (entry.flow) {
       context.fillStyle = COLORS.gold;
@@ -371,7 +377,7 @@ function drawGaugeEntries(
     if (entry.detail) {
       context.fillStyle = COLORS.muted;
       context.font = '400 23px "PingFang SC", "Microsoft YaHei", sans-serif';
-      context.fillText(wrapText(context, entry.detail, 720, 1)[0] ?? "", 184, y + 88);
+      context.fillText(wrapText(context, entry.detail, dayOffset === 1 ? 660 : 720, 1)[0] ?? "", titleX, y + 88);
     }
 
     drawGauge(context, 340, y + 205, 74, entry.engagement, 0, 10, "engagement");

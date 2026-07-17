@@ -217,8 +217,13 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   background: #fffefb;
   cursor: pointer;
 }
+.time-editor-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; }
+.day-offset-control { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; border-radius: 13px; background: var(--paper-deep); }
+.day-offset-control button { min-width: 49px; border: 0; border-radius: 10px; padding: 8px 7px; color: var(--muted); background: transparent; font-size: 12px; cursor: pointer; }
+.day-offset-control button.active { color: var(--ink); background: var(--card); box-shadow: 0 2px 8px rgba(70, 55, 37, .09); font-weight: 700; }
 .time-field input {
-  min-width: 112px;
+  min-width: 0;
+  width: 112px;
   border: 0;
   outline: 0;
   background: transparent;
@@ -312,6 +317,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .entry-card h3 { margin: 0; font-size: 17px; line-height: 1.4; }
 .entry-card__title-row { display: flex; align-items: center; gap: 9px; }
 .entry-card__title-row time { flex: 0 0 auto; padding: 4px 7px; border-radius: 8px; color: var(--green-dark); background: var(--green-soft); font-size: 11px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.entry-card__title-row .entry-card__time--next-day { color: var(--coral); background: var(--coral-soft); }
 .entry-card p { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
 .entry-card__top p { max-height: 82px; overflow: hidden; transition: max-height .22s ease, opacity .16s ease, margin .22s ease; }
 .swipe-entry--editor-expanded .entry-card__top p { max-height: 0; margin-top: 0; opacity: 0; }

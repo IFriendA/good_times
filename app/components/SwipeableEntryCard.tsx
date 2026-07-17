@@ -1,7 +1,7 @@
 "use client";
 
 import { PointerEvent, ReactNode, useRef, useState } from "react";
-import { entryTime } from "../lib/date";
+import { entryDayOffset, entryTime, entryTimeLabel, shiftDate } from "../lib/date";
 import { ActivityEntry } from "../lib/types";
 import Gauge from "./Gauge";
 import { CloseIcon, EditIcon, EyeIcon, EyeOffIcon, SparkleIcon, TrashIcon } from "./Icons";
@@ -100,6 +100,8 @@ export default function SwipeableEntryCard({
   }
 
   const hidden = entry.hidden === true;
+  const dayOffset = entryDayOffset(entry.dayOffset, entry.date, entry.createdAt);
+  const time = entryTime(entry.time, entry.createdAt);
 
   return (
     <div
@@ -156,8 +158,11 @@ export default function SwipeableEntryCard({
           <div className="entry-card__top">
             <div>
               <div className="entry-card__title-row">
-                <time dateTime={`${entry.date}T${entryTime(entry.time, entry.createdAt)}`}>
-                  {entryTime(entry.time, entry.createdAt)}
+                <time
+                  className={dayOffset === 1 ? "entry-card__time--next-day" : undefined}
+                  dateTime={`${dayOffset === 1 ? shiftDate(entry.date, 1) : entry.date}T${time}`}
+                >
+                  {entryTimeLabel(dayOffset, entry.time, entry.createdAt)}
                 </time>
                 <h3>{entry.title}</h3>
               </div>

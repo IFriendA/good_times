@@ -18,7 +18,7 @@ import {
   SparkleIcon,
   UploadIcon,
 } from "./components/Icons";
-import { currentTimeKey, entryTime, formatDate, shiftDate, shortDate, todayKey } from "./lib/date";
+import { currentTimeKey, entryDayOffset, entryTime, formatDate, shiftDate, shortDate, todayKey } from "./lib/date";
 import { clearEntries, deleteEntry, getEntries, saveEntries, saveEntry } from "./lib/storage";
 import { createDailyImage, exportBackup, shareDailyImage, ShareStyle } from "./lib/share";
 import { ActivityEntry, isActivityEntry } from "./lib/types";
@@ -30,6 +30,7 @@ type SortOrder = "asc" | "desc";
 const EMPTY_FORM: ActivityFormValue = {
   id: null,
   time: "",
+  dayOffset: 0,
   title: "",
   detail: "",
   engagement: 5,
@@ -146,8 +147,9 @@ export default function Home() {
       entries
         .filter((entry) => entry.date === selectedDate)
         .sort((a, b) => {
+          const offsetComparison = entryDayOffset(a.dayOffset, a.date, a.createdAt) - entryDayOffset(b.dayOffset, b.date, b.createdAt);
           const timeComparison = entryTime(a.time, a.createdAt).localeCompare(entryTime(b.time, b.createdAt));
-          const stableComparison = timeComparison || a.createdAt.localeCompare(b.createdAt);
+          const stableComparison = offsetComparison || timeComparison || a.createdAt.localeCompare(b.createdAt);
           return sortOrder === "asc" ? stableComparison : -stableComparison;
         }),
     [entries, selectedDate, sortOrder],
@@ -227,7 +229,8 @@ export default function Home() {
   }
 
   function startNewEntry() {
-    setForm({ ...EMPTY_FORM, time: currentTimeKey() });
+    const dayOffset = todayKey() === shiftDate(selectedDate, 1) ? 1 : 0;
+    setForm({ ...EMPTY_FORM, time: currentTimeKey(), dayOffset });
     setFormOpen(true);
     window.setTimeout(() => {
       document.querySelector<HTMLInputElement>("#new-activity-title")?.focus();
@@ -249,6 +252,7 @@ export default function Home() {
     return {
       id: entry.id,
       time: entryTime(entry.time, entry.createdAt),
+      dayOffset: entryDayOffset(entry.dayOffset, entry.date, entry.createdAt),
       title: entry.title,
       detail: entry.detail,
       engagement: entry.engagement,
@@ -317,6 +321,7 @@ export default function Home() {
       id: existing?.id ?? crypto.randomUUID(),
       date: selectedDate,
       time: form.time || currentTimeKey(),
+      dayOffset: form.dayOffset,
       title,
       detail: form.detail.trim(),
       engagement: form.engagement,

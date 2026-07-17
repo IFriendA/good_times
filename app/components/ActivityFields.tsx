@@ -7,6 +7,7 @@ import { SparkleIcon } from "./Icons";
 export type ActivityFormValue = {
   id: string | null;
   time: string;
+  dayOffset: 0 | 1;
   title: string;
   detail: string;
   engagement: number;
@@ -40,17 +41,35 @@ export default function ActivityFields({ value, onChange, fieldPrefix }: Props) 
   return (
     <>
       <label className="field-label" htmlFor={timeId}>时间</label>
-      <label className="time-field" htmlFor={timeId} onClick={openTimePicker}>
-        <input
-          ref={timeInputRef}
-          id={timeId}
-          type="time"
-          value={value.time}
-          onChange={(event) => onChange({ time: event.target.value })}
-          required
-        />
-        <span>这项活动发生在什么时候</span>
-      </label>
+      <div className="time-editor-row">
+        <div className="day-offset-control" aria-label="活动发生日期">
+          <button
+            type="button"
+            className={value.dayOffset === 0 ? "active" : ""}
+            onClick={() => onChange({ dayOffset: 0 })}
+          >
+            当天
+          </button>
+          <button
+            type="button"
+            className={value.dayOffset === 1 ? "active" : ""}
+            onClick={() => onChange({ dayOffset: 1 })}
+          >
+            次日
+          </button>
+        </div>
+        <label className="time-field" htmlFor={timeId} onClick={openTimePicker}>
+          <input
+            ref={timeInputRef}
+            id={timeId}
+            type="time"
+            value={value.time}
+            onChange={(event) => onChange({ time: event.target.value })}
+            required
+          />
+          <span>发生时间</span>
+        </label>
+      </div>
 
       <label className="field-label" htmlFor={titleId}>活动</label>
       <input
