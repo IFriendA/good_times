@@ -103,7 +103,7 @@ export default function SwipeableEntryCard({
 
   return (
     <div
-      className={`swipe-entry ${isOpen ? "swipe-entry--open" : ""} ${actionsVisible ? "swipe-entry--actions-visible" : ""} ${isEditing ? "swipe-entry--editing" : ""}`}
+      className={`swipe-entry ${isOpen ? "swipe-entry--open" : ""} ${actionsVisible ? "swipe-entry--actions-visible" : ""} ${isEditing ? "swipe-entry--editing" : ""} ${editorExpanded ? "swipe-entry--editor-expanded" : ""}`}
       data-entry-id={entry.id}
     >
       <div className="swipe-actions" aria-hidden={!actionsVisible}>

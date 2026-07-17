@@ -314,12 +314,12 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .entry-card__title-row time { flex: 0 0 auto; padding: 4px 7px; border-radius: 8px; color: var(--green-dark); background: var(--green-soft); font-size: 11px; font-weight: 750; font-variant-numeric: tabular-nums; }
 .entry-card p { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
 .entry-card__top p { max-height: 82px; overflow: hidden; transition: max-height .22s ease, opacity .16s ease, margin .22s ease; }
-.swipe-entry--editing .entry-card__top p { max-height: 0; margin-top: 0; opacity: 0; }
+.swipe-entry--editor-expanded .entry-card__top p { max-height: 0; margin-top: 0; opacity: 0; }
 .flow-badge { flex: 0 0 auto; display: flex; align-items: center; gap: 3px; padding: 5px 8px; border-radius: 20px; color: #856614; background: var(--gold-soft); font-size: 11px; font-weight: 700; }
 .entry-card__top .flow-badge { max-height: 32px; overflow: hidden; transition: max-height .2s ease, opacity .15s ease, padding .2s ease; }
-.swipe-entry--editing .entry-card__top .flow-badge { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; }
+.swipe-entry--editor-expanded .entry-card__top .flow-badge { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; }
 .entry-card__gauges { display: grid; grid-template-columns: 1fr 1fr; max-height: 180px; margin: 8px -5px -5px; overflow: hidden; opacity: 1; transition: max-height .24s ease, opacity .16s ease, margin .24s ease; }
-.swipe-entry--editing .entry-card__gauges { max-height: 0; margin-top: 0; margin-bottom: 0; opacity: 0; }
+.swipe-entry--editor-expanded .entry-card__gauges { max-height: 0; margin-top: 0; margin-bottom: 0; opacity: 0; }
 
 .inline-editor-shell { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .28s cubic-bezier(.22, .78, .28, 1), opacity .18s ease; }
 .inline-editor-shell--expanded { grid-template-rows: 1fr; opacity: 1; }
