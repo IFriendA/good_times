@@ -107,7 +107,6 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .header-action {
   width: 43px;
   height: 43px;
-  margin-left: auto;
   border: 1px solid var(--line);
   border-radius: 50%;
   display: grid;
@@ -115,6 +114,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   background: rgba(255, 253, 248, .62);
   cursor: pointer;
 }
+.header-actions { margin-left: auto; display: flex; align-items: center; gap: 7px; }
 
 .page-section { padding: 22px 18px 10px; }
 .page-section--journal { padding-top: 16px; }

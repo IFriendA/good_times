@@ -63,3 +63,9 @@ export const EyeOffIcon = (props: IconProps) => (
 export const CloseIcon = (props: IconProps) => (
   <Svg {...props}><path d="m6 6 12 12M18 6 6 18" /></Svg>
 );
+export const FullscreenIcon = (props: IconProps) => (
+  <Svg {...props}><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" /></Svg>
+);
+export const ExitFullscreenIcon = (props: IconProps) => (
+  <Svg {...props}><path d="M3 8h5V3M21 8h-5V3M3 16h5v5M21 16h-5v5" /></Svg>
+);

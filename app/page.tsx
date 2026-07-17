@@ -9,6 +9,8 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   DownloadIcon,
+  ExitFullscreenIcon,
+  FullscreenIcon,
   JournalIcon,
   PlusIcon,
   SettingsIcon,
@@ -96,6 +98,7 @@ export default function Home() {
   const [shareStyle, setShareStyle] = useState<ShareStyle>("simple");
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewBlobRef = useRef<Blob | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -111,6 +114,19 @@ export default function Home() {
       .then(setEntries)
       .catch(() => setToast("读取本地记录失败，请刷新后重试"))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    function syncFullscreenState() {
+      const fullscreenDocument = document as Document & { webkitFullscreenElement?: Element | null };
+      setIsFullscreen(Boolean(document.fullscreenElement ?? fullscreenDocument.webkitFullscreenElement));
+    }
+    document.addEventListener("fullscreenchange", syncFullscreenState);
+    document.addEventListener("webkitfullscreenchange", syncFullscreenState);
+    return () => {
+      document.removeEventListener("fullscreenchange", syncFullscreenState);
+      document.removeEventListener("webkitfullscreenchange", syncFullscreenState);
+    };
   }, []);
 
   useEffect(() => {
@@ -272,13 +288,7 @@ export default function Home() {
   }
 
   function handleEditorAnimationEnd(entryId: string, expanded: boolean) {
-    if (expanded) {
-      document.querySelector<HTMLElement>(`[data-entry-id="${entryId}"]`)?.scrollIntoView({
-        block: "nearest",
-        behavior: "smooth",
-      });
-      return;
-    }
+    if (expanded) return;
     if (editingId !== entryId) return;
 
     const nextEntry = pendingEdit;
@@ -448,6 +458,30 @@ export default function Home() {
     setForm(EMPTY_FORM);
   }
 
+  async function toggleFullscreen() {
+    const fullscreenDocument = document as Document & {
+      webkitExitFullscreen?: () => Promise<void> | void;
+      webkitFullscreenElement?: Element | null;
+    };
+    const root = document.documentElement as HTMLElement & {
+      webkitRequestFullscreen?: () => Promise<void> | void;
+    };
+    const activeElement = document.fullscreenElement ?? fullscreenDocument.webkitFullscreenElement;
+
+    try {
+      if (activeElement) {
+        if (document.exitFullscreen) await document.exitFullscreen();
+        else if (fullscreenDocument.webkitExitFullscreen) await fullscreenDocument.webkitExitFullscreen();
+        return;
+      }
+      if (root.requestFullscreen) await root.requestFullscreen();
+      else if (root.webkitRequestFullscreen) await root.webkitRequestFullscreen();
+      else showToast("当前浏览器不支持网页全屏，可尝试添加到手机主屏幕");
+    } catch {
+      showToast("当前浏览器暂时无法进入全屏");
+    }
+  }
+
   if (!selectedDate) {
     return <main className="app-shell app-shell--loading">正在翻开日志…</main>;
   }
@@ -464,11 +498,16 @@ export default function Home() {
           <p className="eyebrow">GOOD TIMES</p>
           <h1>美好时光日志</h1>
         </div>
-        {activeTab === "journal" && (
-          <button className="header-action" type="button" onClick={openShare} aria-label="分享当天记录">
-            <ShareIcon />
+        <div className="header-actions">
+          <button className="header-action" type="button" onClick={toggleFullscreen} aria-label={isFullscreen ? "退出全屏" : "进入全屏"}>
+            {isFullscreen ? <ExitFullscreenIcon /> : <FullscreenIcon />}
           </button>
-        )}
+          {activeTab === "journal" && (
+            <button className="header-action" type="button" onClick={openShare} aria-label="分享当天记录">
+              <ShareIcon />
+            </button>
+          )}
+        </div>
       </header>
 
       {activeTab === "journal" && (
