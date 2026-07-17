@@ -1,31 +1,39 @@
 "use client";
 
-import { PointerEvent, useRef, useState } from "react";
+import { PointerEvent, ReactNode, useRef, useState } from "react";
 import { entryTime } from "../lib/date";
 import { ActivityEntry } from "../lib/types";
 import Gauge from "./Gauge";
-import { EditIcon, EyeIcon, EyeOffIcon, SparkleIcon, TrashIcon } from "./Icons";
+import { CloseIcon, EditIcon, EyeIcon, EyeOffIcon, SparkleIcon, TrashIcon } from "./Icons";
 
 const ACTIONS_WIDTH = 152;
 
 type Props = {
   entry: ActivityEntry;
   isOpen: boolean;
+  isEditing: boolean;
+  editorExpanded: boolean;
+  editor: ReactNode;
   onOpen: () => void;
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onToggleHidden: () => void;
+  onEditorAnimationEnd: (expanded: boolean) => void;
 };
 
 export default function SwipeableEntryCard({
   entry,
   isOpen,
+  isEditing,
+  editorExpanded,
+  editor,
   onOpen,
   onClose,
   onEdit,
   onDelete,
   onToggleHidden,
+  onEditorAnimationEnd,
 }: Props) {
   const [dragOffset, setDragOffset] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -35,10 +43,11 @@ export default function SwipeableEntryCard({
   const pointerId = useRef<number | null>(null);
   const direction = useRef<"horizontal" | "vertical" | null>(null);
 
-  const offset = dragOffset ?? (isOpen ? -ACTIONS_WIDTH : 0);
-  const actionsVisible = isOpen || dragging || dragOffset !== null;
+  const offset = isEditing ? 0 : dragOffset ?? (isOpen ? -ACTIONS_WIDTH : 0);
+  const actionsVisible = !isEditing && (isOpen || dragging || dragOffset !== null);
 
   function handlePointerDown(event: PointerEvent<HTMLElement>) {
+    if (isEditing) return;
     if ((event.target as Element).closest("button")) return;
     pointerId.current = event.pointerId;
     startX.current = event.clientX;
@@ -93,7 +102,10 @@ export default function SwipeableEntryCard({
   const hidden = entry.hidden === true;
 
   return (
-    <div className={`swipe-entry ${isOpen ? "swipe-entry--open" : ""} ${actionsVisible ? "swipe-entry--actions-visible" : ""}`}>
+    <div
+      className={`swipe-entry ${isOpen ? "swipe-entry--open" : ""} ${actionsVisible ? "swipe-entry--actions-visible" : ""} ${isEditing ? "swipe-entry--editing" : ""}`}
+      data-entry-id={entry.id}
+    >
       <div className="swipe-actions" aria-hidden={!actionsVisible}>
         <button
           className="swipe-actions__hide"
@@ -122,16 +134,22 @@ export default function SwipeableEntryCard({
       <article
         className={`entry-card paper-card swipe-entry__card ${dragging ? "swipe-entry__card--dragging" : ""}`}
         style={offset === 0 ? undefined : { transform: `translateX(${offset}px)` }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={finishSwipe}
-        onPointerCancel={finishSwipe}
+        onPointerDown={isEditing ? undefined : handlePointerDown}
+        onPointerMove={isEditing ? undefined : handlePointerMove}
+        onPointerUp={isEditing ? undefined : finishSwipe}
+        onPointerCancel={isEditing ? undefined : finishSwipe}
         onTransitionEnd={(event) => {
           if (event.propertyName === "transform" && !dragging) setDragOffset(null);
         }}
       >
-        <button className="entry-card__edit" type="button" onClick={onEdit} aria-label={`编辑${entry.title}`}>
-          <EditIcon size={18} />
+        <button
+          className="entry-card__edit"
+          type="button"
+          onClick={onEdit}
+          aria-label={isEditing ? `关闭${entry.title}的编辑` : `编辑${entry.title}`}
+          aria-expanded={isEditing && editorExpanded}
+        >
+          {isEditing ? <CloseIcon size={18} /> : <EditIcon size={18} />}
         </button>
 
         <div className={`entry-card__content ${hidden ? "entry-card__content--hidden" : ""}`}>
@@ -153,9 +171,22 @@ export default function SwipeableEntryCard({
           </div>
         </div>
 
-        {hidden && (
+        {hidden && !isEditing && (
           <div className="entry-card__hidden-label" aria-label="这条记录已隐藏">
             <EyeOffIcon size={15} /> 已隐藏
+          </div>
+        )}
+
+        {isEditing && (
+          <div
+            className={`inline-editor-shell ${editorExpanded ? "inline-editor-shell--expanded" : ""}`}
+            onTransitionEnd={(event) => {
+              if (event.target === event.currentTarget && event.propertyName === "grid-template-rows") {
+                onEditorAnimationEnd(editorExpanded);
+              }
+            }}
+          >
+            <div className="inline-editor-shell__inner">{editor}</div>
           </div>
         )}
       </article>

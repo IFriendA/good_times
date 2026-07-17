@@ -2,7 +2,7 @@
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import Gauge from "./components/Gauge";
+import ActivityFields, { ActivityFormValue } from "./components/ActivityFields";
 import SwipeableEntryCard from "./components/SwipeableEntryCard";
 import {
   ChartIcon,
@@ -25,17 +25,7 @@ type Tab = "journal" | "review" | "settings";
 type ReviewRange = "7" | "30" | "all";
 type SortOrder = "asc" | "desc";
 
-type FormState = {
-  id: string | null;
-  time: string;
-  title: string;
-  detail: string;
-  engagement: number;
-  energy: number;
-  flow: boolean;
-};
-
-const EMPTY_FORM: FormState = {
+const EMPTY_FORM: ActivityFormValue = {
   id: null,
   time: "",
   title: "",
@@ -88,8 +78,12 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("journal");
   const [selectedDate, setSelectedDate] = useState("");
   const [entries, setEntries] = useState<ActivityEntry[]>([]);
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [form, setForm] = useState<ActivityFormValue>(EMPTY_FORM);
   const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editorExpanded, setEditorExpanded] = useState(false);
+  const [pendingEdit, setPendingEdit] = useState<ActivityEntry | null>(null);
+  const [pendingNew, setPendingNew] = useState(false);
   const [loading, setLoading] = useState(true);
   const [reviewRange, setReviewRange] = useState<ReviewRange>("7");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
@@ -103,7 +97,6 @@ export default function Home() {
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const timeInputRef = useRef<HTMLInputElement>(null);
   const previewBlobRef = useRef<Blob | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -216,16 +209,27 @@ export default function Home() {
     setFormOpen(false);
   }
 
-  function openNewEntry() {
+  function startNewEntry() {
     setForm({ ...EMPTY_FORM, time: currentTimeKey() });
     setFormOpen(true);
     window.setTimeout(() => {
-      document.querySelector<HTMLInputElement>("#activity-title")?.focus();
+      document.querySelector<HTMLInputElement>("#new-activity-title")?.focus();
     }, 50);
   }
 
-  function editActivity(entry: ActivityEntry) {
-    setForm({
+  function openNewEntry() {
+    setOpenSwipeId(null);
+    if (editingId) {
+      setPendingEdit(null);
+      setPendingNew(true);
+      setEditorExpanded(false);
+      return;
+    }
+    startNewEntry();
+  }
+
+  function formFromEntry(entry: ActivityEntry): ActivityFormValue {
+    return {
       id: entry.id,
       time: entryTime(entry.time, entry.createdAt),
       title: entry.title,
@@ -233,9 +237,62 @@ export default function Home() {
       engagement: entry.engagement,
       energy: entry.energy,
       flow: entry.flow,
-    });
-    setFormOpen(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+  }
+
+  function startEditor(entry: ActivityEntry) {
+    setFormOpen(false);
+    setOpenSwipeId(null);
+    setForm(formFromEntry(entry));
+    setEditingId(entry.id);
+    setEditorExpanded(false);
+    window.requestAnimationFrame(() => setEditorExpanded(true));
+  }
+
+  function editActivity(entry: ActivityEntry) {
+    if (editingId === entry.id) {
+      setPendingEdit(null);
+      setPendingNew(false);
+      setEditorExpanded(false);
+      return;
+    }
+    if (editingId) {
+      setPendingEdit(entry);
+      setPendingNew(false);
+      setEditorExpanded(false);
+      return;
+    }
+    startEditor(entry);
+  }
+
+  function cancelEditing() {
+    setPendingEdit(null);
+    setPendingNew(false);
+    setEditorExpanded(false);
+  }
+
+  function handleEditorAnimationEnd(entryId: string, expanded: boolean) {
+    if (expanded) {
+      document.querySelector<HTMLElement>(`[data-entry-id="${entryId}"]`)?.scrollIntoView({
+        block: "nearest",
+        behavior: "smooth",
+      });
+      return;
+    }
+    if (editingId !== entryId) return;
+
+    const nextEntry = pendingEdit;
+    const shouldOpenNew = pendingNew;
+    setEditingId(null);
+    setPendingEdit(null);
+    setPendingNew(false);
+    setForm(EMPTY_FORM);
+
+    if (nextEntry) {
+      window.requestAnimationFrame(() => startEditor(nextEntry));
+    } else if (shouldOpenNew) {
+      window.requestAnimationFrame(startNewEntry);
+    }
   }
 
   async function handleSave(event: FormEvent) {
@@ -265,7 +322,8 @@ export default function Home() {
         const others = current.filter((item) => item.id !== entry.id);
         return [entry, ...others];
       });
-      resetForm();
+      if (existing) setEditorExpanded(false);
+      else resetForm();
       showToast(existing ? "记录已更新" : "这一刻已经收好");
     } catch {
       showToast("保存失败，请稍后重试");
@@ -367,6 +425,10 @@ export default function Home() {
   function switchTab(tab: Tab) {
     setActiveTab(tab);
     setFormOpen(false);
+    setEditingId(null);
+    setEditorExpanded(false);
+    setPendingEdit(null);
+    setPendingNew(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -375,15 +437,15 @@ export default function Home() {
     window.localStorage.setItem("good-times-sort-order", order);
   }
 
-  function openTimePicker() {
-    const input = timeInputRef.current;
-    if (!input) return;
-    input.focus();
-    try {
-      input.showPicker?.();
-    } catch {
-      // 不支持 showPicker 的浏览器仍会通过 label 的默认行为聚焦输入框。
-    }
+  function changeSelectedDate(date: string) {
+    setSelectedDate(date);
+    setOpenSwipeId(null);
+    setEditingId(null);
+    setEditorExpanded(false);
+    setPendingEdit(null);
+    setPendingNew(false);
+    setFormOpen(false);
+    setForm(EMPTY_FORM);
   }
 
   if (!selectedDate) {
@@ -415,7 +477,7 @@ export default function Home() {
             <button
               className="date-navigator__arrow"
               type="button"
-              onClick={() => setSelectedDate((date) => shiftDate(date, -1))}
+              onClick={() => changeSelectedDate(shiftDate(selectedDate, -1))}
               aria-label="前一天"
             >
               <ChevronLeftIcon />
@@ -426,14 +488,14 @@ export default function Home() {
               <input
                 type="date"
                 value={selectedDate}
-                onChange={(event) => setSelectedDate(event.target.value)}
+                onChange={(event) => changeSelectedDate(event.target.value)}
                 aria-label="选择日志日期"
               />
             </label>
             <button
               className="date-navigator__arrow"
               type="button"
-              onClick={() => setSelectedDate((date) => shiftDate(date, 1))}
+              onClick={() => changeSelectedDate(shiftDate(selectedDate, 1))}
               aria-label="后一天"
             >
               <ChevronRightIcon />
@@ -444,76 +506,20 @@ export default function Home() {
             <form className="entry-form paper-card" onSubmit={handleSave}>
               <div className="section-heading">
                 <div>
-                  <p className="eyebrow">{form.id ? "EDIT MOMENT" : "CAPTURE A MOMENT"}</p>
-                  <h2>{form.id ? "修改这段时光" : "刚刚在做什么？"}</h2>
+                  <p className="eyebrow">CAPTURE A MOMENT</p>
+                  <h2>刚刚在做什么？</h2>
                 </div>
                 <button className="text-button" type="button" onClick={resetForm}>取消</button>
               </div>
 
-              <label className="field-label" htmlFor="activity-time">时间</label>
-              <label className="time-field" htmlFor="activity-time" onClick={openTimePicker}>
-                <input
-                  ref={timeInputRef}
-                  id="activity-time"
-                  type="time"
-                  value={form.time}
-                  onChange={(event) => setForm((current) => ({ ...current, time: event.target.value }))}
-                  required
-                />
-                <span>这项活动发生在什么时候</span>
-              </label>
-
-              <label className="field-label" htmlFor="activity-title">活动</label>
-              <input
-                id="activity-title"
-                className="text-input text-input--large"
-                value={form.title}
-                onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-                placeholder="例如：和同事讨论新方案"
-                maxLength={40}
-                required
+              <ActivityFields
+                value={form}
+                onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
+                fieldPrefix="new-activity"
               />
-
-              <label className="field-label" htmlFor="activity-detail">发生了什么？（选填）</label>
-              <textarea
-                id="activity-detail"
-                className="text-input"
-                value={form.detail}
-                onChange={(event) => setForm((current) => ({ ...current, detail: event.target.value }))}
-                placeholder="尽量具体：和谁、在哪里、哪一部分让你有感觉……"
-                maxLength={160}
-                rows={3}
-              />
-
-              <div className="gauge-grid">
-                <Gauge
-                  kind="engagement"
-                  value={form.engagement}
-                  onChange={(engagement) => setForm((current) => ({ ...current, engagement }))}
-                />
-                <Gauge
-                  kind="energy"
-                  value={form.energy}
-                  onChange={(energy) => setForm((current) => ({ ...current, energy }))}
-                />
-              </div>
-
-              <label className={`flow-toggle ${form.flow ? "flow-toggle--active" : ""}`}>
-                <input
-                  type="checkbox"
-                  checked={form.flow}
-                  onChange={(event) => setForm((current) => ({ ...current, flow: event.target.checked }))}
-                />
-                <span className="flow-toggle__icon"><SparkleIcon /></span>
-                <span>
-                  <strong>这是一次心流体验</strong>
-                  <small>全神贯注，几乎忘记了时间</small>
-                </span>
-                <span className="flow-toggle__check">✓</span>
-              </label>
 
               <button className="primary-button" type="submit">
-                {form.id ? "保存修改" : "保存这段时光"}
+                保存这段时光
               </button>
             </form>
           ) : (
@@ -554,17 +560,34 @@ export default function Home() {
           {loading ? (
             <div className="empty-state">正在读取本地记录…</div>
           ) : dayEntries.length ? (
-            <div className="entry-list">
+            <div className={`entry-list ${editingId ? "entry-list--editing" : ""}`}>
               {dayEntries.map((entry) => (
                 <SwipeableEntryCard
                   key={entry.id}
                   entry={entry}
                   isOpen={openSwipeId === entry.id}
+                  isEditing={editingId === entry.id}
+                  editorExpanded={editingId === entry.id && editorExpanded}
+                  editor={editingId === entry.id ? (
+                    <form className="inline-editor-form" onSubmit={handleSave}>
+                      <p className="eyebrow">EDIT THIS MOMENT</p>
+                      <ActivityFields
+                        value={form}
+                        onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
+                        fieldPrefix={`edit-${entry.id}`}
+                      />
+                      <div className="inline-editor-actions">
+                        <button className="secondary-button" type="button" onClick={cancelEditing}>取消</button>
+                        <button className="primary-button" type="submit">保存修改</button>
+                      </div>
+                    </form>
+                  ) : null}
                   onOpen={() => setOpenSwipeId(entry.id)}
                   onClose={() => setOpenSwipeId((current) => current === entry.id ? null : current)}
                   onEdit={() => editActivity(entry)}
                   onDelete={() => handleDelete(entry)}
                   onToggleHidden={() => handleToggleHidden(entry)}
+                  onEditorAnimationEnd={(expanded) => handleEditorAnimationEnd(entry.id, expanded)}
                 />
               ))}
             </div>

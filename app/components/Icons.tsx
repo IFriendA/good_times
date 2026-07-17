@@ -60,3 +60,6 @@ export const EyeIcon = (props: IconProps) => (
 export const EyeOffIcon = (props: IconProps) => (
   <Svg {...props}><path d="m3 3 18 18M10.6 6.2A9.8 9.8 0 0 1 12 6c6 0 9.5 6 9.5 6a15 15 0 0 1-2.1 2.7M6.6 6.6C4 8.3 2.5 12 2.5 12s3.5 6 9.5 6a9.8 9.8 0 0 0 4-.8M9.9 9.9a3 3 0 0 0 4.2 4.2" /></Svg>
 );
+export const CloseIcon = (props: IconProps) => (
+  <Svg {...props}><path d="m6 6 12 12M18 6 6 18" /></Svg>
+);
