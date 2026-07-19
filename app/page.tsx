@@ -97,10 +97,12 @@ export default function Home() {
   const [nicknameEditing, setNicknameEditing] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareStyle, setShareStyle] = useState<ShareStyle>("simple");
+  const [includeHiddenInShare, setIncludeHiddenInShare] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
   const previewBlobRef = useRef<Blob | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -108,9 +110,11 @@ export default function Home() {
     setSelectedDate(todayKey());
     const savedNickname = window.localStorage.getItem("good-times-nickname") ?? "";
     const savedSortOrder = window.localStorage.getItem("good-times-sort-order");
+    const savedIncludeHidden = window.localStorage.getItem("good-times-include-hidden-in-share");
     setNickname(savedNickname);
     setNicknameDraft(savedNickname);
     if (savedSortOrder === "asc" || savedSortOrder === "desc") setSortOrder(savedSortOrder);
+    setIncludeHiddenInShare(savedIncludeHidden === "true");
     getEntries()
       .then(setEntries)
       .catch(() => setToast("读取本地记录失败，请刷新后重试"))
@@ -155,6 +159,11 @@ export default function Home() {
     [entries, selectedDate, sortOrder],
   );
 
+  const shareEntries = useMemo(
+    () => includeHiddenInShare ? dayEntries : dayEntries.filter((entry) => entry.hidden !== true),
+    [dayEntries, includeHiddenInShare],
+  );
+
   useEffect(() => {
     if (!shareOpen || !nickname || nicknameEditing || !selectedDate) {
       setPreviewUrl("");
@@ -166,7 +175,7 @@ export default function Home() {
     previewBlobRef.current = null;
     setPreviewLoading(true);
     setPreviewUrl("");
-    createDailyImage(selectedDate, dayEntries, nickname, shareStyle)
+    createDailyImage(selectedDate, shareEntries, nickname, shareStyle)
       .then((blob) => {
         if (!active) return;
         previewBlobRef.current = blob;
@@ -185,7 +194,7 @@ export default function Home() {
       previewBlobRef.current = null;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [shareOpen, nickname, nicknameEditing, selectedDate, dayEntries, shareStyle]);
+  }, [shareOpen, nickname, nicknameEditing, selectedDate, shareEntries, shareStyle]);
 
   const reviewEntries = useMemo(() => {
     const visibleEntries = entries.filter((entry) => entry.hidden !== true);
@@ -380,6 +389,26 @@ export default function Home() {
     setShareOpen(true);
   }
 
+  function toggleHiddenInShare() {
+    setIncludeHiddenInShare((current) => {
+      const next = !current;
+      window.localStorage.setItem("good-times-include-hidden-in-share", String(next));
+      return next;
+    });
+  }
+
+  function openDatePicker() {
+    const input = dateInputRef.current;
+    if (!input) return;
+    input.focus();
+    try {
+      if (typeof input.showPicker === "function") input.showPicker();
+      else input.click();
+    } catch {
+      input.click();
+    }
+  }
+
   function saveNicknameForSharing(event: FormEvent) {
     event.preventDefault();
     const cleaned = nicknameDraft.trim();
@@ -394,7 +423,7 @@ export default function Home() {
     try {
       const result = await shareDailyImage(
         selectedDate,
-        dayEntries,
+        shareEntries,
         nickname,
         shareStyle,
         previewBlobRef.current ?? undefined,
@@ -527,23 +556,26 @@ export default function Home() {
             >
               <ChevronLeftIcon />
             </button>
-            <label className="date-navigator__center">
-              <span>{selectedDate === todayKey() ? "今天" : "日志日期"}</span>
-              <strong>{formatDate(selectedDate)}</strong>
+            <div className="date-navigator__center">
+              <button type="button" className="date-navigator__trigger" onClick={openDatePicker} aria-label="选择日志日期">
+                <span>{selectedDate === todayKey() ? "今天" : "日志日期"}</span>
+                <strong>{formatDate(selectedDate)}</strong>
+              </button>
               <input
+                ref={dateInputRef}
                 type="date"
                 value={selectedDate}
                 onChange={(event) => changeSelectedDate(event.target.value)}
                 aria-label="选择日志日期"
               />
-            </label>
+            </div>
             <button
               className="date-navigator__arrow"
               type="button"
               onClick={() => changeSelectedDate(shiftDate(selectedDate, 1))}
               aria-label="后一天"
             >
-              <ChevronRightIcon />
+              <ChevronLeftIcon className="date-navigator__chevron--right" />
             </button>
           </div>
 
@@ -793,6 +825,20 @@ export default function Home() {
               <h3>本地日志</h3>
               <p>无需账号，不会自动上传云端。建议定期导出备份。</p>
             </div>
+          </div>
+
+          <div className="settings-group">
+            <h3>分享与隐私</h3>
+            <button
+              type="button"
+              className="settings-row settings-row--switch"
+              onClick={toggleHiddenInShare}
+              aria-pressed={includeHiddenInShare}
+            >
+              <span className="settings-row__icon"><ShareIcon /></span>
+              <span><strong>导出隐藏记录</strong><small>开启后，隐藏记录会以隐私卡片形式保留在分享图片中</small></span>
+              <span className={`settings-switch ${includeHiddenInShare ? "active" : ""}`} aria-hidden="true"><span /></span>
+            </button>
           </div>
 
           <div className="settings-group">

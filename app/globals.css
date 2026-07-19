@@ -128,6 +128,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 }
 
 .date-navigator__arrow {
+  position: relative;
   width: 44px;
   height: 44px;
   padding: 0;
@@ -143,21 +144,26 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   cursor: pointer;
 }
 .date-navigator__arrow svg {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 22px;
   height: 22px;
+  margin: auto;
   flex: 0 0 22px;
 }
+.date-navigator__chevron--right { transform: rotate(180deg); }
 .date-navigator__arrow:active { background: rgba(97, 116, 90, .1); }
 
 .date-navigator__center {
   position: relative;
   text-align: center;
-  cursor: pointer;
 }
+.date-navigator__trigger { width: 100%; border: 0; padding: 3px 8px; border-radius: 12px; color: var(--ink); background: transparent; cursor: pointer; }
+.date-navigator__trigger:active { background: rgba(97, 116, 90, .08); }
 .date-navigator__center span { display: block; color: var(--coral); font-size: 11px; font-weight: 700; }
 .date-navigator__center strong { display: block; margin-top: 2px; font-family: var(--font-serif), serif; font-size: 18px; }
-.date-navigator__center input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
+.date-navigator__center input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
 .paper-card {
   background: var(--card);
@@ -398,11 +404,17 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .settings-row { width: 100%; min-height: 67px; display: grid; grid-template-columns: 40px 1fr 20px; align-items: center; gap: 10px; border: 0; border-bottom: 1px solid rgba(222, 212, 196, .75); background: var(--card); padding: 11px 13px; text-align: left; cursor: pointer; }
 .settings-row:first-of-type { border-radius: 16px 16px 0 0; }
 .settings-row:last-of-type { border-radius: 0 0 16px 16px; border-bottom: 0; }
+.settings-row:only-of-type { border-radius: 16px; }
 .settings-row__icon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: var(--green); background: var(--green-soft); }
 .settings-row strong, .settings-row small { display: block; }
 .settings-row strong { font-size: 14px; }
 .settings-row small { margin-top: 3px; color: var(--muted); font-size: 10px; line-height: 1.4; }
 .settings-row > svg { color: var(--faint); }
+.settings-row--switch { grid-template-columns: 40px 1fr 42px; }
+.settings-switch { width: 40px; height: 23px; padding: 3px; border-radius: 12px; background: var(--line); transition: background .18s; }
+.settings-switch span { display: block; width: 17px; height: 17px; border-radius: 50%; background: var(--card); box-shadow: 0 1px 4px rgba(56, 47, 36, .2); transition: transform .18s; }
+.settings-switch.active { background: var(--green); }
+.settings-switch.active span { transform: translateX(17px); }
 .danger-zone button { width: 100%; border: 1px solid rgba(200, 111, 80, .35); border-radius: 14px; background: var(--coral-soft); color: #a44e33; padding: 12px; font-weight: 650; cursor: pointer; }
 .app-footer { padding: 42px 12px 20px; text-align: center; color: var(--muted); }
 .app-footer .brand-mark { margin: auto; }
