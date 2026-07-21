@@ -98,6 +98,7 @@ export default function Home() {
   const [shareOpen, setShareOpen] = useState(false);
   const [shareStyle, setShareStyle] = useState<ShareStyle>("simple");
   const [includeHiddenInShare, setIncludeHiddenInShare] = useState(false);
+  const [showFullShareContent, setShowFullShareContent] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -111,10 +112,12 @@ export default function Home() {
     const savedNickname = window.localStorage.getItem("good-times-nickname") ?? "";
     const savedSortOrder = window.localStorage.getItem("good-times-sort-order");
     const savedIncludeHidden = window.localStorage.getItem("good-times-include-hidden-in-share");
+    const savedShowFullShareContent = window.localStorage.getItem("good-times-show-full-share-content");
     setNickname(savedNickname);
     setNicknameDraft(savedNickname);
     if (savedSortOrder === "asc" || savedSortOrder === "desc") setSortOrder(savedSortOrder);
     setIncludeHiddenInShare(savedIncludeHidden === "true");
+    setShowFullShareContent(savedShowFullShareContent === "true");
     getEntries()
       .then(setEntries)
       .catch(() => setToast("读取本地记录失败，请刷新后重试"))
@@ -175,7 +178,7 @@ export default function Home() {
     previewBlobRef.current = null;
     setPreviewLoading(true);
     setPreviewUrl("");
-    createDailyImage(selectedDate, shareEntries, nickname, shareStyle)
+    createDailyImage(selectedDate, shareEntries, nickname, shareStyle, showFullShareContent)
       .then((blob) => {
         if (!active) return;
         previewBlobRef.current = blob;
@@ -194,7 +197,7 @@ export default function Home() {
       previewBlobRef.current = null;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [shareOpen, nickname, nicknameEditing, selectedDate, shareEntries, shareStyle]);
+  }, [shareOpen, nickname, nicknameEditing, selectedDate, shareEntries, shareStyle, showFullShareContent]);
 
   const reviewEntries = useMemo(() => {
     const visibleEntries = entries.filter((entry) => entry.hidden !== true);
@@ -397,6 +400,14 @@ export default function Home() {
     });
   }
 
+  function toggleFullShareContent() {
+    setShowFullShareContent((current) => {
+      const next = !current;
+      window.localStorage.setItem("good-times-show-full-share-content", String(next));
+      return next;
+    });
+  }
+
   function openDatePicker() {
     const input = dateInputRef.current;
     if (!input) return;
@@ -426,6 +437,7 @@ export default function Home() {
         shareEntries,
         nickname,
         shareStyle,
+        showFullShareContent,
         previewBlobRef.current ?? undefined,
       );
       showToast(result === "shared" ? "分享面板已打开" : "分享图片已保存");
@@ -829,6 +841,16 @@ export default function Home() {
 
           <div className="settings-group">
             <h3>分享与隐私</h3>
+            <button
+              type="button"
+              className="settings-row settings-row--switch"
+              onClick={toggleFullShareContent}
+              aria-pressed={showFullShareContent}
+            >
+              <span className="settings-row__icon"><ShareIcon /></span>
+              <span><strong>分享完整内容</strong><small>开启后，分享长图会完整显示标题和详情，不再省略</small></span>
+              <span className={`settings-switch ${showFullShareContent ? "active" : ""}`} aria-hidden="true"><span /></span>
+            </button>
             <button
               type="button"
               className="settings-row settings-row--switch"

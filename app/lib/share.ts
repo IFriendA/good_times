@@ -77,6 +77,54 @@ function wrapText(
   return lines;
 }
 
+type ShareEntryLayout = {
+  cardHeight: number;
+  titleLines: string[];
+  detailLines: string[];
+  gaugeCenterY: number;
+};
+
+function measureEntryLayout(
+  context: CanvasRenderingContext2D,
+  entry: ActivityEntry,
+  style: ShareStyle,
+  showFullContent: boolean,
+): ShareEntryLayout {
+  const dayOffset = entryDayOffset(entry.dayOffset, entry.date, entry.createdAt);
+  const fullContent = showFullContent && !entry.hidden;
+  const maxLines = fullContent ? Number.POSITIVE_INFINITY : 1;
+
+  context.font = '600 34px "PingFang SC", "Microsoft YaHei", sans-serif';
+  const titleLines = wrapText(context, entry.title, dayOffset === 1 ? 480 : 540, maxLines);
+
+  context.font = `${style === "simple" ? "400 25px" : "400 23px"} "PingFang SC", "Microsoft YaHei", sans-serif`;
+  const detailLines = entry.detail
+    ? wrapText(context, entry.detail, dayOffset === 1 ? (style === "simple" ? 700 : 660) : (style === "simple" ? 760 : 720), maxLines)
+    : [];
+
+  if (style === "simple") {
+    const extraHeight = fullContent
+      ? Math.max(0, titleLines.length - 1) * 42 + Math.max(0, detailLines.length - 1) * 34
+      : 0;
+    return {
+      cardHeight: (entry.detail ? 178 : 144) + extraHeight,
+      titleLines,
+      detailLines,
+      gaugeCenterY: 0,
+    };
+  }
+
+  const extraHeight = fullContent
+    ? Math.max(0, titleLines.length - 1) * 42 + Math.max(0, detailLines.length - 1) * 32
+    : 0;
+  return {
+    cardHeight: 260 + extraHeight,
+    titleLines,
+    detailLines,
+    gaugeCenterY: 205 + extraHeight,
+  };
+}
+
 function drawMeter(
   context: CanvasRenderingContext2D,
   x: number,
@@ -277,11 +325,13 @@ function drawHiddenExportCard(
 function drawSimpleEntries(
   context: CanvasRenderingContext2D,
   entries: ActivityEntry[],
+  layouts: ShareEntryLayout[],
 ) {
   let y = 250;
 
-  entries.forEach((entry) => {
-    const cardHeight = entry.detail ? 178 : 144;
+  entries.forEach((entry, index) => {
+    const layout = layouts[index];
+    const cardHeight = layout.cardHeight;
     context.fillStyle = COLORS.card;
     roundedRect(context, 60, y, 960, cardHeight, 28);
     if (entry.hidden) {
@@ -299,7 +349,9 @@ function drawSimpleEntries(
 
     context.fillStyle = COLORS.ink;
     context.font = '600 34px "PingFang SC", "Microsoft YaHei", sans-serif';
-    context.fillText(wrapText(context, entry.title, dayOffset === 1 ? 480 : 540, 1)[0] ?? "", titleX, y + 52);
+    layout.titleLines.forEach((line, lineIndex) => {
+      context.fillText(line, titleX, y + 52 + lineIndex * 42);
+    });
 
     if (entry.flow) {
       context.fillStyle = COLORS.gold;
@@ -312,7 +364,10 @@ function drawSimpleEntries(
     if (entry.detail) {
       context.fillStyle = COLORS.muted;
       context.font = '400 25px "PingFang SC", "Microsoft YaHei", sans-serif';
-      context.fillText(wrapText(context, entry.detail, dayOffset === 1 ? 700 : 760, 1)[0] ?? "", titleX, y + 92);
+      const detailY = y + 92 + Math.max(0, layout.titleLines.length - 1) * 42;
+      layout.detailLines.forEach((line, lineIndex) => {
+        context.fillText(line, titleX, detailY + lineIndex * 34);
+      });
     }
 
     const meterY = y + cardHeight - 38;
@@ -347,11 +402,13 @@ function drawSimpleEntries(
 function drawGaugeEntries(
   context: CanvasRenderingContext2D,
   entries: ActivityEntry[],
+  layouts: ShareEntryLayout[],
 ) {
   let y = 250;
 
-  entries.forEach((entry) => {
-    const cardHeight = 260;
+  entries.forEach((entry, index) => {
+    const layout = layouts[index];
+    const cardHeight = layout.cardHeight;
     context.fillStyle = COLORS.card;
     roundedRect(context, 60, y, 960, cardHeight, 28);
     if (entry.hidden) {
@@ -367,7 +424,9 @@ function drawGaugeEntries(
     context.fillText(timeLabel, 88, y + 49);
     context.fillStyle = COLORS.ink;
     context.font = '600 34px "PingFang SC", "Microsoft YaHei", sans-serif';
-    context.fillText(wrapText(context, entry.title, dayOffset === 1 ? 480 : 540, 1)[0] ?? "", titleX, y + 52);
+    layout.titleLines.forEach((line, lineIndex) => {
+      context.fillText(line, titleX, y + 52 + lineIndex * 42);
+    });
 
     if (entry.flow) {
       context.fillStyle = COLORS.gold;
@@ -380,11 +439,14 @@ function drawGaugeEntries(
     if (entry.detail) {
       context.fillStyle = COLORS.muted;
       context.font = '400 23px "PingFang SC", "Microsoft YaHei", sans-serif';
-      context.fillText(wrapText(context, entry.detail, dayOffset === 1 ? 660 : 720, 1)[0] ?? "", titleX, y + 88);
+      const detailY = y + 88 + Math.max(0, layout.titleLines.length - 1) * 42;
+      layout.detailLines.forEach((line, lineIndex) => {
+        context.fillText(line, titleX, detailY + lineIndex * 32);
+      });
     }
 
-    drawGauge(context, 340, y + 205, 74, entry.engagement, 0, 10, "engagement");
-    drawGauge(context, 740, y + 205, 74, entry.energy, -5, 5, "energy");
+    drawGauge(context, 340, y + layout.gaugeCenterY, 74, entry.engagement, 0, 10, "engagement");
+    drawGauge(context, 740, y + layout.gaugeCenterY, 74, entry.energy, -5, 5, "energy");
     y += cardHeight + 20;
   });
 
@@ -396,13 +458,15 @@ function makeDailyCanvas(
   entries: ActivityEntry[],
   nickname: string,
   style: ShareStyle,
+  showFullContent: boolean,
 ): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
+  const measuringContext = canvas.getContext("2d");
+  if (!measuringContext) throw new Error("无法生成分享图片");
+  const layouts = entries.map((entry) => measureEntryLayout(measuringContext, entry, style, showFullContent));
   const contentHeight = entries.length
-    ? style === "gauges"
-      ? 250 + entries.length * 280
-      : 250 + entries.reduce((height, entry) => height + (entry.detail ? 198 : 164), 0)
+    ? 250 + layouts.reduce((height, layout) => height + layout.cardHeight + 20, 0)
     : 640;
   canvas.height = Math.max(1500, contentHeight + 110);
   const context = canvas.getContext("2d");
@@ -413,8 +477,8 @@ function makeDailyCanvas(
   drawHeader(context, date, nickname);
 
   if (entries.length) {
-    if (style === "gauges") drawGaugeEntries(context, entries);
-    else drawSimpleEntries(context, entries);
+    if (style === "gauges") drawGaugeEntries(context, entries, layouts);
+    else drawSimpleEntries(context, entries, layouts);
   } else {
     context.fillStyle = COLORS.card;
     roundedRect(context, 60, 270, 960, 330, 32);
@@ -434,8 +498,9 @@ export async function createDailyImage(
   entries: ActivityEntry[],
   nickname: string,
   style: ShareStyle,
+  showFullContent = false,
 ): Promise<Blob> {
-  const canvas = makeDailyCanvas(date, entries, nickname, style);
+  const canvas = makeDailyCanvas(date, entries, nickname, style, showFullContent);
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((result) => {
       if (result) resolve(result);
@@ -449,9 +514,10 @@ export async function shareDailyImage(
   entries: ActivityEntry[],
   nickname: string,
   style: ShareStyle,
+  showFullContent = false,
   preparedBlob?: Blob,
 ) {
-  const blob = preparedBlob ?? await createDailyImage(date, entries, nickname, style);
+  const blob = preparedBlob ?? await createDailyImage(date, entries, nickname, style, showFullContent);
   const file = new File([blob], `美好时光-${nickname}-${date}.png`, { type: "image/png" });
 
   if (navigator.share && navigator.canShare?.({ files: [file] })) {
