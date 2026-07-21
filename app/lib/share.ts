@@ -316,16 +316,17 @@ function drawSimpleEntries(
     }
 
     const meterY = y + cardHeight - 38;
+    const meterWidth = 245;
     context.fillStyle = COLORS.muted;
     context.font = '500 20px "PingFang SC", "Microsoft YaHei", sans-serif';
     context.fillText("投入", 142, meterY + 6);
-    drawMeter(context, 200, meterY - 5, 245, entry.engagement, 0, 10, COLORS.green);
-    context.fillText("能量", 500, meterY + 6);
+    drawMeter(context, 200, meterY - 5, meterWidth, entry.engagement, 0, 10, COLORS.green);
+    context.fillText("能量", 545, meterY + 6);
     drawMeter(
       context,
-      558,
+      603,
       meterY - 5,
-      245,
+      meterWidth,
       entry.energy,
       -5,
       5,
@@ -333,8 +334,10 @@ function drawSimpleEntries(
     );
     context.fillStyle = COLORS.ink;
     context.font = '600 20px "PingFang SC", "Microsoft YaHei", sans-serif';
-    context.fillText(`${entry.engagement}/10`, 455, meterY + 6);
-    context.fillText(entry.energy > 0 ? `+${entry.energy}` : String(entry.energy), 813, meterY + 6);
+    context.textAlign = "right";
+    context.fillText(`${entry.engagement}/10`, 515, meterY + 6);
+    context.fillText(entry.energy > 0 ? `+${entry.energy}` : String(entry.energy), 900, meterY + 6);
+    context.textAlign = "start";
     y += cardHeight + 20;
   });
 
